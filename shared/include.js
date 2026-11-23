@@ -1,5 +1,12 @@
 // shared/include.js — <div data-include="/arabic/header.html"></div> loader.
 const cache = new Map();
+
+// Readiness contract: ui.js / install.js wait for this so their inits
+// don't run before the header partial has been injected into the DOM.
+window.__partialsLoaded = false;
+let _resolveReady;
+window.partialsReady = new Promise((res) => { _resolveReady = res; });
+
 async function fetchPartial(url) {
   if (cache.has(url)) return cache.get(url);
   const res = await fetch(url, { cache: 'no-cache' });
@@ -8,6 +15,7 @@ async function fetchPartial(url) {
   cache.set(url, text);
   return text;
 }
+
 async function processNode(node) {
   if (!node.isConnected) return;                // already replaced by another parent
   const url = node.dataset.include;
@@ -25,11 +33,15 @@ async function processNode(node) {
     node.replaceWith(document.createComment(` include failed: ${url} `));
   }
 }
+
 async function run() {
   const roots = [...document.querySelectorAll('[data-include]')];
   await Promise.all(roots.map(processNode));
+  window.__partialsLoaded = true;
+  _resolveReady();
   document.dispatchEvent(new CustomEvent('partials:ready'));
 }
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', run);
 } else {

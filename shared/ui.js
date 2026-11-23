@@ -2,16 +2,24 @@
 import { prefs } from './store.js';
 import { auth }  from './auth.js';
 import { applyI18n } from './i18n.js';
+
 function currentLang() { return prefs.get().lang || document.documentElement.lang || 'en'; }
+
+// Idempotency guard: an element is wired at most once.
+const inited = new WeakSet();
+
 export function initTheme() {
   const btn = document.getElementById('theme-btn');
-  if (!btn) return;
+  if (!btn || inited.has(btn)) return;
+  inited.add(btn);
+
   const sync = (mode) => {
     document.documentElement.dataset.mode = mode;
     btn.textContent = mode === 'dark' ? '☀' : '☾';
     btn.setAttribute('aria-pressed', mode === 'dark' ? 'true' : 'false');
   };
   sync(prefs.get().mode);
+
   btn.addEventListener('click', async () => {
     const next = prefs.get().mode === 'dark' ? 'light' : 'dark';
     sync(next);
@@ -20,9 +28,12 @@ export function initTheme() {
   window.addEventListener('edu:mode-changed', (e) => sync(e.detail.mode));
   window.addEventListener('storage', (e) => { if (e.key === 'edu:mode') sync(prefs.get().mode); });
 }
+
 export function initLang(selectEl) {
   const sel = selectEl || document.getElementById('lang-sel');
-  if (!sel) return;
+  if (!sel || inited.has(sel)) return;
+  inited.add(sel);
+
   const apply = (lang) => {
     const l = lang || document.documentElement.lang || 'en';
     sel.value = l;
@@ -30,6 +41,7 @@ export function initLang(selectEl) {
     document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
   };
   apply(prefs.get().lang);
+
   sel.addEventListener('change', async () => {
     apply(sel.value);
     await prefs.setLang(sel.value);
@@ -37,9 +49,12 @@ export function initLang(selectEl) {
   window.addEventListener('edu:lang-changed', (e) => apply(e.detail.lang));
   window.addEventListener('storage', (e) => { if (e.key === 'edu:lang') apply(prefs.get().lang); });
 }
+
 export function initUserChip() {
   const chip = document.getElementById('user-chip');
-  if (!chip) return;
+  if (!chip || inited.has(chip)) return;
+  inited.add(chip);
+
   auth.onChange((user) => {
     if (user) {
       chip.textContent = user.name || user.email || 'You';
@@ -51,9 +66,9 @@ export function initUserChip() {
     chip.title  = user?.email || '';
     chip.dataset.signedin = user ? '1' : '0';
   });
+
   chip.addEventListener('click', async () => {
     if (!auth.getUser()) {
-      // Testing UI — swap for a real form in Supabase mode
       const email = prompt('Email');    if (!email) return;
       const pw    = prompt('Password'); if (!pw)    return;
       try { await auth.signIn(email, pw); }
@@ -62,11 +77,13 @@ export function initUserChip() {
       await auth.signOut();
     }
   });
-  // Keep current lang consistent for the chip when language changes while signed out.
+
+  // Keep the chip's "Sign in" label in the current language when signed out.
   window.addEventListener('edu:lang-changed', () => {
     if (!auth.getUser()) applyI18n(chip);
   });
 }
+
 /** Mark cross-app links to open in a new tab so installed windows don't morph. */
 export function externalAppLink(appId) {
   const a = document.querySelector(`[data-app-link="${appId}"]`);
@@ -74,9 +91,11 @@ export function externalAppLink(appId) {
   a.target = '_blank';
   a.rel = 'noopener noreferrer';
 }
+
 // Convenience: bring up all header controls with one call.
+// Waits for the partial loader if it's present on the page.
 export function initHeader() {
-  initTheme();
-  initLang();
-  initUserChip();
+  const go = () => { initTheme(); initLang(); initUserChip(); };
+  if (window.__partialsLoaded) { go(); return; }
+  (window.partialsReady || Promise.resolve()).then(go);
 }
