@@ -1,0 +1,33 @@
+{
+  "id": "/philo/",
+  "name": "Philo Edu Dashboard",
+  "short_name": "Philo Edu",
+  "description": "Philosophy education dashboard",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "/philo/",
+  "scope": "/philo/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#6b4dab",
+  "background_color": "#f6f7f9",
+  "categories": ["education"],
+  "icons": [
+    { "src": "/philo/assets/icons/icon-96x96.png",   "sizes": "96x96",   "type": "image/png", "purpose": "any" },
+    { "src": "/philo/assets/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "/philo/assets/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/philo/assets/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Leçon 1",
+      "short_name": "L1",
+      "url": "/philo/term1/lesson1.html",
+      "icons": [{ "src": "/philo/assets/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [
+    { "src": "/philo/assets/screenshots/home.png",   "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow" },
+    { "src": "/philo/assets/screenshots/lesson.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide" }
+  ]
+}

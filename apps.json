@@ -1,0 +1,24 @@
+{
+  "apps": [
+    {
+      "id": "arabic",
+      "name": "Arabic Edu Dashboard",
+      "short_name": "Arabic Edu",
+      "path": "/arabic/",
+      "lang": "ar",
+      "dir": "rtl",
+      "theme_color": "#0a7d5a",
+      "icon": "/arabic/assets/icons/icon-192x192.png"
+    },
+    {
+      "id": "philo",
+      "name": "Philo Edu Dashboard",
+      "short_name": "Philo Edu",
+      "path": "/philo/",
+      "lang": "fr",
+      "dir": "ltr",
+      "theme_color": "#6b4dab",
+      "icon": "/philo/assets/icons/icon-192x192.png"
+    }
+  ]
+}

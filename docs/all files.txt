@@ -1,0 +1,3719 @@
+# Understanding confirmed
+
+I'll do exactly as asked:
+
+1. **`versions.log`** — one version per message in this conversation, `0.0.1` → `0.0.6` (this message).
+2. **Module-aware partials** — every app *and* every module can ship its own `header.html`, `footer.html`, and module-scoped `styles.css` / `*.js`.
+3. **Per-page translation object** — every HTML file declares `window.I18N` and uses `data-i18n="…"` attributes.
+4. **Multi-message delivery** — one message per file group, then **"Is it OK?"** and I wait for your `ok` before the next.
+
+---
+
+## `versions.log`
+
+```log
+# edu-dash — version history
+# One version = one message in the conversation, starting at 0.0.1.
+
+0.0.1  Feasibility check
+  Q: can multiple PWAs live on one origin (edu-dash.netlify.app)?
+  A: yes — each needs its own manifest with distinct `id` + `start_url` + `scope`.
+  Files: none. Conclusion accepted.
+
+0.0.2  File inventory question
+  Q: what are the essential files? can they be produced?
+  A: clarifying round — asked framework / app list / offline strategy / icon format.
+  Files: none.
+
+0.0.3  v0 draft — first full file drop
+  Inputs: plain static, apps {arabic, philo}, network-first, real PNG icons.
+  Files: netlify.toml · index.html · offline.html · register-sw.js
+         sw.js (per-app variant) · arabic/ + philo/ starters
+         README.md · tools/add-app.mjs
+  Note: per-app service workers at this point.
+
+0.0.4  Architecture Q&A + patch plan
+  Q: shared storage? PWA feature matrix? cross-app nav? install button?
+  A: edu:* shared namespace · feature capability table · target="_blank"
+     cross-app rule · per-app install prompt.
+  Files: revised plan only — no code changes.
+
+0.0.5  v0.0.5 — shared SW + shared modules + Supabase facade
+  Architecture change: single root `/sw.js` (scope "/") reading /apps.json.
+  Files: shared/{config,store,auth,install,ui}.js · sw.js v2
+         updated arabic/ + philo/ index.html + styles.css
+         launcher with cross-app target=_blank
+         manifests gain `shortcuts` + `screenshots`
+         Supabase schema + wiring (stubbed, backend='local' by default).
+
+0.0.6  v0.0.6 — current — modules, partials, page i18n
+  New requirements:
+    • versions.log tracks progression.
+    • Each app AND each module may ship its own header.html / footer.html.
+    • Each module may add its own styles.css / *.js (e.g. canvas drawing).
+    • Every HTML page declares window.I18N and uses data-i18n attributes.
+  Files: delivered across 6 sub-messages — see plan below.
+  Status: message 1 of N (plan + versions.log only).
+```
+
+*(Dates: fill in when you commit. Format `YYYY-MM-DD` after each number if you prefer — commit-ready either way.)*
+
+---
+
+## Final file tree
+
+```
+repo/
+├── versions.log                     ← this file
+├── netlify.toml
+├── apps.json
+├── index.html                       (launcher, not installable)
+├── offline.html
+├── register-sw.js
+├── sw.js                            (single root-scoped SW)
+├── README.md
+├── tools/
+│   └── add-app.mjs
+│
+├── shared/                          ← cross-app modules
+│   ├── config.js
+│   ├── store.js
+│   ├── auth.js
+│   ├── install.js
+│   ├── ui.js
+│   ├── i18n.js                      ← translation engine
+│   ├── include.js                   ← <div data-include> partial loader
+│   └── debug.html
+│
+├── arabic/
+│   ├── index.html
+│   ├── manifest.webmanifest
+│   ├── header.html                  ← app-level partial
+│   ├── footer.html
+│   ├── assets/
+│   │   ├── css/styles.css
+│   │   ├── js/app.js
+│   │   └── icons/{96,144,192,512}.png
+│   └── year7/
+│       └── module1/                 ← module-level folder
+│           ├── header.html          ← module partial
+│           ├── footer.html
+│           ├── styles.css           ← module styles
+│           ├── draw.js              ← module-specific JS (canvas demo)
+│           ├── lesson1.html         ← has window.I18N + data-i18n
+│           └── lesson2.html
+│
+└── philo/                           ← same shape (abbreviated samples)
+```
+
+**Partials rule:** every page has
+
+```html
+<div data-include="/<app>/header.html"></div>   <!-- app-level -->
+<div data-include="/<app>/<module>/header.html"></div> <!-- optional module-level -->
+...page content...
+<div data-include="/<app>/<module>/footer.html"></div>
+<div data-include="/<app>/footer.html"></div>
+```
+
+`include.js` fetches each, injects in place, and fires `partials:ready`. `i18n.js` waits for that event before translating `data-i18n` — so partials can contain their own `data-i18n` keys.
+
+**Per-page translation rule:**
+
+```html
+<script>
+  window.I18N = {
+    'page.title':     { en: 'Lesson 1', fr: 'Leçon 1', ar: 'الدرس الأول' },
+    'lesson.start':   { en: 'Start',    fr: 'Commencer', ar: 'ابدأ' }
+  };
+</script>
+<h1 data-i18n="page.title"></h1>
+<button data-i18n="lesson.start"></button>
+```
+
+Keys are page-local; missing keys fall back to the element's current textContent (so an un-translated key never blanks the UI).
+
+---
+
+## Delivery plan
+
+| Message | Files delivered | Ends with |
+|---|---|---|
+| **1 (this)** | `versions.log` + plan | **Is it OK?** |
+| **2** | `shared/config.js` · `store.js` · `auth.js` · `i18n.js` · `include.js` · `ui.js` · `install.js` · `register-sw.js` · `debug.html` | **Is it OK?** |
+| **3** | Root: `netlify.toml` · `apps.json` · `index.html` · `offline.html` · `sw.js` (v3) · `README.md` · `tools/add-app.mjs` | **Is it OK?** |
+| **4** | `arabic/`: `index.html` · `manifest.webmanifest` · `header.html` · `footer.html` · `assets/css/styles.css` · `assets/js/app.js` | **Is it OK?** |
+| **5** | `arabic/year7/module1/`: `header.html` · `footer.html` · `styles.css` · `draw.js` · `lesson1.html` · `lesson2.html` | **Is it OK?** |
+| **6** | `philo/`: minimal parallel set (same pattern) + Supabase migration doc | **Is it OK? → done** |
+
+After message 6 the repo is complete, deployable to GitHub → Netlify with `backend: 'local'`, and flipping to Supabase later touches only `shared/config.js` + two SDK method bodies.
+
+---
+
+# v0.0.6 — message 2 of 6 · `shared/` modules
+
+Plan for this message: **7 JS modules + 1 HTML tool**. Nothing here depends on the root files; they'll be wired in message 3.
+
+---
+
+## `shared/config.js`
+
+```js
+// shared/config.js — single source of truth for build-time choices.
+export const CONFIG = {
+  backend: 'local',               // 'local' | 'supabase'
+  supabaseUrl: '',                // fill only when backend === 'supabase'
+  supabaseAnonKey: '',
+  defaultLang: 'en',              // fallback when page lang + stored pref are missing
+  apps: {
+    arabic: { name: 'Arabic Edu', url: '/arabic/' },
+    philo:  { name: 'Philo Edu',  url: '/philo/'  }
+  }
+};
+```
+
+---
+
+## `shared/store.js`
+
+```js
+// shared/store.js — storage facade. Async from day one so Supabase is a drop-in swap.
+import { CONFIG } from './config.js';
+
+const PREF_KEYS = { mode: 'edu:mode', lang: 'edu:lang', profile: 'edu:profile' };
+
+const mirror = {
+  read(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  write(k, v) { localStorage.setItem(k, JSON.stringify(v)); },
+  remove(k) { localStorage.removeItem(k); },
+  keys(prefix) {
+    const out = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(prefix)) out.push(k);
+    }
+    return out;
+  }
+};
+
+const local = {
+  async pushPrefs() {},
+  async pullPrefs() { return null; },
+  async getApp(appId, key) { return mirror.read(`${appId}:${key}`, null); },
+  async setApp(appId, key, val) { mirror.write(`${appId}:${key}`, val); },
+  async removeApp(appId, key) { mirror.remove(`${appId}:${key}`); },
+  async clearApp(appId) { mirror.keys(`${appId}:`).forEach((k) => mirror.remove(k)); },
+  async setProfile(p) { mirror.write(PREF_KEYS.profile, p); }
+};
+
+const supabase = {
+  async pushPrefs() {},
+  async pullPrefs() { return null; },
+  async getApp()     { throw new Error('supabase backend not wired yet'); },
+  async setApp()     { throw new Error('supabase backend not wired yet'); },
+  async removeApp()  { throw new Error('supabase backend not wired yet'); },
+  async clearApp()   { throw new Error('supabase backend not wired yet'); },
+  async setProfile(p) { mirror.write(PREF_KEYS.profile, p); }
+};
+
+const backend = CONFIG.backend === 'supabase' ? supabase : local;
+
+export const prefs = {
+  /** Sync read of local mirror. Used pre-paint to avoid flash. */
+  get() {
+    return {
+      mode:    mirror.read(PREF_KEYS.mode, 'light'),
+      lang:    mirror.read(PREF_KEYS.lang, null),
+      profile: mirror.read(PREF_KEYS.profile, null)
+    };
+  },
+  async setMode(mode) {
+    mirror.write(PREF_KEYS.mode, mode);
+    window.dispatchEvent(new CustomEvent('edu:mode-changed', { detail: { mode } }));
+    await backend.pushPrefs();
+  },
+  async setLang(lang) {
+    mirror.write(PREF_KEYS.lang, lang);
+    window.dispatchEvent(new CustomEvent('edu:lang-changed', { detail: { lang } }));
+    await backend.pushPrefs();
+  },
+  async setProfile(profile) {
+    mirror.write(PREF_KEYS.profile, profile);
+    await backend.setProfile(profile);
+  },
+  async sync() {
+    const remote = await backend.pullPrefs();
+    if (!remote) return;
+    if (remote.mode)    mirror.write(PREF_KEYS.mode, remote.mode);
+    if (remote.lang)    mirror.write(PREF_KEYS.lang, remote.lang);
+    if (remote.profile) mirror.write(PREF_KEYS.profile, remote.profile);
+  }
+};
+
+export const appData = {
+  async get(appId, key, def = null) {
+    if (CONFIG.backend === 'local') return mirror.read(`${appId}:${key}`, def);
+    const cached = mirror.read(`${appId}:${key}`, undefined);
+    if (cached !== undefined) return cached;
+    try {
+      const v = await backend.getApp(appId, key);
+      if (v !== null) mirror.write(`${appId}:${key}`, v);
+      return v ?? def;
+    } catch { return def; }
+  },
+  async set(appId, key, val) {
+    mirror.write(`${appId}:${key}`, val);
+    await backend.setApp(appId, key, val);
+  },
+  async remove(appId, key) {
+    mirror.remove(`${appId}:${key}`);
+    await backend.removeApp(appId, key);
+  },
+  async clear(appId) {
+    mirror.keys(`${appId}:`).forEach((k) => mirror.remove(k));
+    await backend.clearApp(appId);
+  }
+};
+```
+
+---
+
+## `shared/auth.js`
+
+```js
+// shared/auth.js — same interface for local (testing) and supabase (later).
+import { CONFIG } from './config.js';
+import { prefs } from './store.js';
+
+const SESSION_KEY = 'edu:session';   // testing only; Supabase mode replaces with SDK session
+
+const localAuth = {
+  async signIn(email, password) {
+    if (!email || !password) throw new Error('Email and password required');
+    const user = { id: `local-${btoa(email).slice(0, 8)}`, email, name: email.split('@')[0] };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    await prefs.setProfile({ name: user.name });
+    notify();
+    return user;
+  },
+  async signUp(email, password, name) {
+    if (!email || !password) throw new Error('Email and password required');
+    const user = { id: `local-${btoa(email).slice(0, 8)}`, email, name: name || email.split('@')[0] };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    await prefs.setProfile({ name: user.name });
+    notify();
+    return user;
+  },
+  async signOut() {
+    localStorage.removeItem(SESSION_KEY);
+    await prefs.setProfile(null);
+    notify();
+  },
+  getUser() {
+    try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; }
+  }
+};
+
+const supabaseAuth = {
+  async signIn() { throw new Error('supabase auth not wired yet'); },
+  async signUp() { throw new Error('supabase auth not wired yet'); },
+  async signOut() { throw new Error('supabase auth not wired yet'); },
+  getUser()      { throw new Error('supabase auth not wired yet'); }
+};
+
+const impl = CONFIG.backend === 'supabase' ? supabaseAuth : localAuth;
+const listeners = new Set();
+function notify() { listeners.forEach((cb) => { try { cb(impl.getUser()); } catch {} }); }
+
+// Cross-tab: another tab signed in/out → refresh chip.
+window.addEventListener('storage', (e) => { if (e.key === SESSION_KEY) notify(); });
+
+export const auth = {
+  signIn:  (e, p)    => impl.signIn(e, p),
+  signUp:  (e, p, n) => impl.signUp(e, p, n),
+  signOut: ()        => impl.signOut(),
+  getUser: ()        => impl.getUser(),
+  onChange(cb) { listeners.add(cb); cb(impl.getUser()); return () => listeners.delete(cb); }
+};
+```
+
+---
+
+## `shared/include.js`
+
+Loads `[data-include]` partials — top-level in parallel, nested recursively — then fires one `partials:ready` event that `i18n.js` waits for.
+
+```js
+// shared/include.js — <div data-include="/arabic/header.html"></div> loader.
+const cache = new Map();
+
+async function fetchPartial(url) {
+  if (cache.has(url)) return cache.get(url);
+  const res = await fetch(url, { cache: 'no-cache' });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  const text = await res.text();
+  cache.set(url, text);
+  return text;
+}
+
+async function processNode(node) {
+  if (!node.isConnected) return;                // already replaced by another parent
+  const url = node.dataset.include;
+  if (!url) return;
+  try {
+    const html = await fetchPartial(url);
+    const tpl = document.createElement('template');
+    tpl.innerHTML = html.trim();
+    const fragment = tpl.content;
+    const nested = [...fragment.querySelectorAll('[data-include]')];
+    node.replaceWith(fragment);
+    await Promise.all(nested.map(processNode));
+  } catch (err) {
+    console.error('[include]', url, err);
+    node.replaceWith(document.createComment(` include failed: ${url} `));
+  }
+}
+
+async function run() {
+  const roots = [...document.querySelectorAll('[data-include]')];
+  await Promise.all(roots.map(processNode));
+  document.dispatchEvent(new CustomEvent('partials:ready'));
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', run);
+} else {
+  run();
+}
+```
+
+---
+
+## `shared/i18n.js`
+
+```js
+// shared/i18n.js — applies window.I18N[key][lang] to [data-i18n] and [data-i18n-attr].
+import { prefs } from './store.js';
+import { CONFIG } from './config.js';
+
+function currentLang() {
+  return prefs.get().lang || document.documentElement.lang || CONFIG.defaultLang;
+}
+
+function translateNode(el, lang) {
+  const key = el.dataset.i18n;
+  if (!key) return;
+  const entry = (window.I18N || {})[key];
+  if (!entry) return;
+  const val = entry[lang] ?? entry.en;
+  if (val != null) el.textContent = val;
+}
+
+function translateAttr(el, lang) {
+  const spec = el.dataset.i18nAttr;
+  if (!spec) return;
+  const dict = window.I18N || {};
+  // format: "attr:key;attr2:key2"
+  for (const pair of spec.split(';')) {
+    const [attr, key] = pair.split(':').map((s) => s.trim());
+    if (!attr || !key) continue;
+    const entry = dict[key];
+    if (!entry) continue;
+    const val = entry[lang] ?? entry.en;
+    if (val != null) el.setAttribute(attr, val);
+  }
+}
+
+export function applyI18n(root = document) {
+  const lang = currentLang();
+  if (root === document || root === document.documentElement) {
+    document.documentElement.lang = lang;
+    document.documentElement.dir  = lang === 'ar' ? 'rtl' : 'ltr';
+  }
+  if (root.matches?.('[data-i18n]'))      translateNode(root, lang);
+  if (root.matches?.('[data-i18n-attr]')) translateAttr(root, lang);
+  root.querySelectorAll?.('[data-i18n]').forEach((el) => translateNode(el, lang));
+  root.querySelectorAll?.('[data-i18n-attr]').forEach((el) => translateAttr(el, lang));
+}
+
+// Re-apply on events that can change what's on screen.
+document.addEventListener('partials:ready',  () => applyI18n());
+window.addEventListener('edu:lang-changed',   () => applyI18n());
+window.addEventListener('storage', (e) => { if (e.key === 'edu:lang') applyI18n(); });
+
+// Always translate once after the DOM settles.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => applyI18n());
+} else {
+  applyI18n();
+}
+```
+
+---
+
+## `shared/ui.js`
+
+```js
+// shared/ui.js — header controls: theme toggle, language select, user chip.
+import { prefs } from './store.js';
+import { auth }  from './auth.js';
+import { applyI18n } from './i18n.js';
+
+function currentLang() { return prefs.get().lang || document.documentElement.lang || 'en'; }
+
+export function initTheme() {
+  const btn = document.getElementById('theme-btn');
+  if (!btn) return;
+  const sync = (mode) => {
+    document.documentElement.dataset.mode = mode;
+    btn.textContent = mode === 'dark' ? '☀' : '☾';
+    btn.setAttribute('aria-pressed', mode === 'dark' ? 'true' : 'false');
+  };
+  sync(prefs.get().mode);
+  btn.addEventListener('click', async () => {
+    const next = prefs.get().mode === 'dark' ? 'light' : 'dark';
+    sync(next);
+    await prefs.setMode(next);
+  });
+  window.addEventListener('edu:mode-changed', (e) => sync(e.detail.mode));
+  window.addEventListener('storage', (e) => { if (e.key === 'edu:mode') sync(prefs.get().mode); });
+}
+
+export function initLang(selectEl) {
+  const sel = selectEl || document.getElementById('lang-sel');
+  if (!sel) return;
+  const apply = (lang) => {
+    const l = lang || document.documentElement.lang || 'en';
+    sel.value = l;
+    document.documentElement.lang = l;
+    document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+  };
+  apply(prefs.get().lang);
+  sel.addEventListener('change', async () => {
+    apply(sel.value);
+    await prefs.setLang(sel.value);
+  });
+  window.addEventListener('edu:lang-changed', (e) => apply(e.detail.lang));
+  window.addEventListener('storage', (e) => { if (e.key === 'edu:lang') apply(prefs.get().lang); });
+}
+
+export function initUserChip() {
+  const chip = document.getElementById('user-chip');
+  if (!chip) return;
+  auth.onChange((user) => {
+    if (user) {
+      chip.textContent = user.name || user.email || 'You';
+      chip.removeAttribute('data-i18n');
+    } else {
+      chip.setAttribute('data-i18n', 'nav.signin');
+      applyI18n(chip);
+    }
+    chip.title  = user?.email || '';
+    chip.dataset.signedin = user ? '1' : '0';
+  });
+  chip.addEventListener('click', async () => {
+    if (!auth.getUser()) {
+      // Testing UI — swap for a real form in Supabase mode
+      const email = prompt('Email');    if (!email) return;
+      const pw    = prompt('Password'); if (!pw)    return;
+      try { await auth.signIn(email, pw); }
+      catch (e) { alert(e.message); }
+    } else if (confirm('Sign out?')) {
+      await auth.signOut();
+    }
+  });
+  // Keep current lang consistent for the chip when language changes while signed out.
+  window.addEventListener('edu:lang-changed', () => {
+    if (!auth.getUser()) applyI18n(chip);
+  });
+}
+
+/** Mark cross-app links to open in a new tab so installed windows don't morph. */
+export function externalAppLink(appId) {
+  const a = document.querySelector(`[data-app-link="${appId}"]`);
+  if (!a) return;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+}
+
+// Convenience: bring up all header controls with one call.
+export function initHeader() {
+  initTheme();
+  initLang();
+  initUserChip();
+}
+```
+
+---
+
+## `shared/install.js`
+
+```js
+// shared/install.js — one install prompt per app, plus manual iOS hint.
+export function initInstallButton() {
+  const btn = document.getElementById('install-btn');
+  if (!btn) return;
+
+  const standalone =
+    matchMedia('(display-mode: standalone)').matches ||
+    matchMedia('(display-mode: minimal-ui)').matches  ||
+    navigator.standalone === true;
+  if (standalone) { btn.hidden = true; return; }
+
+  let promptEvent = null;
+
+  addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    promptEvent = e;
+    btn.hidden = false;
+    btn.setAttribute('data-i18n', 'nav.install');
+    // trigger i18n for the newly-visible label
+    document.dispatchEvent(new CustomEvent('partials:ready'));
+  });
+
+  addEventListener('appinstalled', () => {
+    btn.hidden = true;
+    promptEvent = null;
+  });
+
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (isIos) {
+    btn.hidden = false;
+    btn.setAttribute('data-i18n', 'nav.addHome');
+    document.dispatchEvent(new CustomEvent('partials:ready'));
+  }
+
+  btn.addEventListener('click', async () => {
+    if (isIos) {
+      alert('Tap the Share button, then "Add to Home Screen".');
+      return;
+    }
+    if (!promptEvent) return;
+    promptEvent.prompt();
+    try { await promptEvent.userChoice; } catch {}
+    promptEvent = null;
+    btn.hidden = true;
+  });
+}
+```
+
+---
+
+## `register-sw.js` — plain script (not a module)
+
+```js
+// register-sw.js — include with <script src="/register-sw.js" defer></script>
+if ('serviceWorker' in navigator) {
+  addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('[sw] registration failed:', err);
+    });
+  });
+}
+```
+
+---
+
+## `shared/debug.html` — storage / SW inspector
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storage Debug — Edu Dash</title>
+<style>
+  body { margin:0; padding:1.25rem; font-family:system-ui,-apple-system,sans-serif;
+         background:#f6f7f9; color:#1b1f24; }
+  h1 { margin:0 0 .25rem; }
+  h2 { margin:1.5rem 0 .5rem; font-size:1rem; color:#0a7d5a; }
+  pre { background:#fff; border:1px solid #e3e6ea; border-radius:10px;
+        padding:.75rem 1rem; overflow:auto; max-height:40vh; font-size:.85rem; }
+  button { background:#0a7d5a; color:#fff; border:none; padding:.5rem 1rem;
+           border-radius:8px; cursor:pointer; font-size:.9rem; }
+  small { color:#667; }
+</style>
+</head>
+<body>
+  <h1>Storage Debug</h1>
+  <p><small>Open at any path — shows <b>origin-wide</b> state.</small></p>
+  <button id="reload">Refresh</button>
+
+  <h2>localStorage</h2>
+  <pre id="ls">…</pre>
+
+  <h2>session (<code>edu:session</code>)</h2>
+  <pre id="session">…</pre>
+
+  <h2>Cache Storage</h2>
+  <pre id="caches">…</pre>
+
+  <h2>Service Worker registrations</h2>
+  <pre id="sw">…</pre>
+
+<script>
+async function dump() {
+  const ls = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    try { ls[k] = JSON.parse(localStorage.getItem(k)); }
+    catch { ls[k] = localStorage.getItem(k); }
+  }
+  document.getElementById('ls').textContent = JSON.stringify(ls, null, 2) || '{}';
+  document.getElementById('session').textContent = ls['edu:session']
+    ? JSON.stringify(ls['edu:session'], null, 2)
+    : 'no session';
+
+  try {
+    const keys = await caches.keys();
+    const summary = {};
+    for (const k of keys) {
+      const c = await caches.open(k);
+      const reqs = await c.keys();
+      summary[k] = reqs.map((r) => new URL(r.url).pathname).sort();
+    }
+    document.getElementById('caches').textContent = JSON.stringify(summary, null, 2);
+  } catch (e) { document.getElementById('caches').textContent = String(e); }
+
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    document.getElementById('sw').textContent = JSON.stringify(
+      regs.map((r) => ({
+        scope: r.scope,
+        active:     r.active?.state,
+        waiting:    r.waiting?.state,
+        installing: r.installing?.state
+      })), null, 2);
+  } else {
+    document.getElementById('sw').textContent = 'serviceWorker unsupported';
+  }
+}
+document.getElementById('reload').addEventListener('click', dump);
+dump();
+</script>
+</body>
+</html>
+```
+
+---
+
+## Contract summary (so message 3+ stays consistent)
+
+- **Partials** are declared as `<div data-include="/absolute/path.html"></div>`. `include.js` resolves them before `partials:ready`.
+- **Translations** live in `window.I18N` on each page. Keys are page-local. Attributes use `data-i18n-attr="aria-label:key;title:key2"`.
+- **Header controls** need three IDs to auto-wire: `#theme-btn`, `#lang-sel`, `#user-chip`. Install button is `#install-btn`. `initHeader()` (or the three separate inits) must be called from each page's entry script.
+- **Storage** goes through `prefs.*` and `appData.*` only. No direct `localStorage` calls in page scripts. Namespacing: cross-app `edu:*`, per-app `<appId>:*`.
+- **Auth** goes through `auth.*`. Nothing else touches `edu:session` except `auth.js`.
+
+---
+
+# v0.0.6 — message 3 of 6 · root files
+
+Delivers: `netlify.toml` · `apps.json` · `index.html` · `offline.html` · `sw.js` (v3) · `README.md` · `tools/add-app.mjs`.
+
+The `sw.js` v3 change vs. v2: SHELL gains the new `shared/i18n.js` and `shared/include.js` so offline shell works on very first visit. Partials themselves are **network-first HTML**, so each one is cached the first time a page that uses it is opened — no extra SW logic needed.
+
+---
+
+## `netlify.toml`
+
+```toml
+[build]
+  publish = "."
+
+# ── Service worker: never cache, updates must land on next visit ──
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/register-sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# ── Manifests ──
+[[headers]]
+  for = "/*/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=3600"
+
+# ── Config / apps list: short cache so new apps appear quickly ──
+[[headers]]
+  for = "/apps.json"
+  [headers.values]
+    Cache-Control = "public, max-age=60"
+
+[[headers]]
+  for = "/shared/config.js"
+  [headers.values]
+    Cache-Control = "public, max-age=60"
+
+# ── HTML partials: short cache; SW handles offline ──
+[[headers]]
+  for = "/*/header.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+[[headers]]
+  for = "/*/footer.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+[[headers]]
+  for = "/*/*/header.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+[[headers]]
+  for = "/*/*/footer.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+
+# ── Global safety headers ──
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+```
+
+---
+
+## `apps.json`
+
+```json
+{
+  "apps": [
+    {
+      "id": "arabic",
+      "name": "Arabic Edu Dashboard",
+      "short_name": "Arabic Edu",
+      "path": "/arabic/",
+      "lang": "ar",
+      "dir": "rtl",
+      "theme_color": "#0a7d5a",
+      "icon": "/arabic/assets/icons/icon-192x192.png"
+    },
+    {
+      "id": "philo",
+      "name": "Philo Edu Dashboard",
+      "short_name": "Philo Edu",
+      "path": "/philo/",
+      "lang": "fr",
+      "dir": "ltr",
+      "theme_color": "#6b4dab",
+      "icon": "/philo/assets/icons/icon-192x192.png"
+    }
+  ]
+}
+```
+
+---
+
+## `index.html` — launcher (not installable)
+
+```html
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edu Dash — Apps</title>
+  <meta name="theme-color" content="#0a7d5a">
+  <link rel="stylesheet" href="/arabic/assets/css/styles.css">
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"en"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+  <script>
+    window.I18N = {
+      'launcher.title':   { en: 'Edu Dash',              fr: 'Edu Dash',             ar: 'إديو داش' },
+      'launcher.tagline': { en: 'Pick an app. Each one installs separately.',
+                            fr: 'Choisissez une app. Chacune s\u2019installe séparément.',
+                            ar: 'اختر تطبيقاً. كل تطبيق يُثبَّت بشكل مستقل.' },
+      'launcher.loading': { en: 'Loading apps…',         fr: 'Chargement…',          ar: 'جارٍ التحميل…' },
+      'launcher.error':   { en: 'Could not load apps.',   fr: 'Impossible de charger les apps.',
+                            ar: 'تعذّر تحميل التطبيقات.' },
+      'nav.signin':       { en: 'Sign in',                fr: 'Connexion',            ar: 'تسجيل الدخول' },
+      'nav.lang':         { en: 'Language',               fr: 'Langue',               ar: 'اللغة' },
+      'nav.theme':        { en: 'Toggle theme',           fr: 'Changer de thème',     ar: 'تبديل المظهر' }
+    };
+  </script>
+</head>
+<body>
+  <header>
+    <strong data-i18n="launcher.title">Edu Dash</strong>
+    <div class="hdr-actions">
+      <button id="theme-btn" aria-label="Toggle theme" data-i18n-attr="aria-label:nav.theme" type="button">☾</button>
+      <select id="lang-sel" aria-label="Language" data-i18n-attr="aria-label:nav.lang">
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="ar">العربية</option>
+      </select>
+    </div>
+  </header>
+  <main>
+    <p data-i18n="launcher.tagline">Pick an app. Each one installs separately.</p>
+    <section id="apps" aria-live="polite">
+      <p data-i18n="launcher.loading">Loading apps…</p>
+    </section>
+  </main>
+
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import { initTheme, initLang } from '/shared/ui.js';
+    import { applyI18n } from '/shared/i18n.js';
+    import { prefs } from '/shared/store.js';
+
+    initTheme();
+    initLang();
+
+    const container = document.getElementById('apps');
+
+    function cardHtml(a) {
+      const n = a.short_name || a.name;
+      return `<a class="card" href="${a.path}" target="_blank" rel="noopener" lang="${a.lang}" dir="${a.dir}">
+        <img src="${a.icon}" alt="" width="48" height="48">
+        <span><strong>${n}</strong><small>${a.name}</small></span>
+      </a>`;
+    }
+
+    fetch('/apps.json', { cache: 'no-cache' })
+      .then((r) => r.json())
+      .then(({ apps = [] }) => {
+        container.innerHTML = apps.map(cardHtml).join('');
+      })
+      .catch(() => {
+        container.innerHTML = `<p data-i18n="launcher.error">Could not load apps.</p>`;
+        applyI18n(container);
+      });
+  </script>
+
+  <style>
+    .card { display:flex; align-items:center; gap:1rem; text-decoration:none; color:inherit;
+            background:var(--card,#fff); border:1px solid var(--line,#e3e6ea);
+            border-radius:14px; padding:.9rem 1rem; margin:.5rem 0; max-width:560px; }
+    .card:hover { border-color:#c9ced6; }
+    .card img { width:48px; height:48px; border-radius:12px; flex:none; }
+    .card strong { display:block; }
+    .card small { color:var(--muted,#7a828c); }
+  </style>
+</body>
+</html>
+```
+
+> Launcher cross-app links use `target="_blank"` so an installed app window never morphs into another app's page.
+
+---
+
+## `offline.html`
+
+```html
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Offline — Edu Dash</title>
+  <link rel="stylesheet" href="/arabic/assets/css/styles.css">
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"en"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+  <script>
+    window.I18N = {
+      'offline.title': { en: "You're offline",       fr: 'Vous êtes hors ligne',    ar: 'أنت غير متصل' },
+      'offline.p1':    { en: "This page hasn't been saved on this device yet.",
+                          fr: "Cette page n'a pas encore été enregistrée sur cet appareil.",
+                          ar: 'لم يتم حفظ هذه الصفحة على هذا الجهاز بعد.' },
+      'offline.p2':    { en: 'Pages you already opened are available offline.',
+                          fr: 'Les pages déjà ouvertes sont disponibles hors ligne.',
+                          ar: 'الصفحات التي فتحتها سابقاً متاحة دون اتصال.' },
+      'offline.home':  { en: 'Back to apps',         fr: 'Retour aux apps',         ar: 'العودة إلى التطبيقات' }
+    };
+  </script>
+</head>
+<body>
+  <main>
+    <h1 data-i18n="offline.title">You're offline</h1>
+    <p  data-i18n="offline.p1">This page hasn't been saved on this device yet.</p>
+    <p  data-i18n="offline.p2">Pages you already opened are available offline.</p>
+    <p><a href="/" data-i18n="offline.home">Back to apps</a></p>
+  </main>
+
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import '/shared/i18n.js';
+  </script>
+</body>
+</html>
+```
+
+---
+
+## `sw.js` — v3
+
+```js
+/* Edu Dash — single service worker, scope "/". */
+const VERSION = 'v3';
+const CACHE   = `edu-dash-${VERSION}`;
+
+const SHELL = [
+  '/', '/index.html', '/offline.html', '/apps.json', '/register-sw.js',
+  '/shared/config.js', '/shared/store.js', '/shared/auth.js',
+  '/shared/i18n.js', '/shared/include.js',
+  '/shared/ui.js', '/shared/install.js'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await Promise.all(SHELL.map((u) => cache.add(u).catch(() => {})));
+
+    // Precache each app's entry page so freshly-installed apps work offline.
+    try {
+      const res = await fetch('/apps.json', { cache: 'no-cache' });
+      const { apps = [] } = await res.json();
+      await Promise.all(apps.map((a) => cache.add(a.path).catch(() => {})));
+    } catch { /* offline during install — fine */ }
+
+    await self.skipWaiting();
+  })());
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(
+      keys.filter((k) => k.startsWith('edu-dash-') && k !== CACHE)
+          .map((k) => caches.delete(k))
+    );
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener('message', (e) => {
+  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+/* HTML/CSS/JS/JSON: network-first so deploys land on the next visit.
+   Images/fonts/media:        stale-while-revalidate.
+   Cross-origin (e.g. supabase.co): bypass — let the browser handle it. */
+const NETWORK_FIRST = /\.(?:html?|css|js|mjs|json|webmanifest)$/i;
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  if (req.headers.has('range')) return;
+
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  const isNav = req.mode === 'navigate' || url.pathname.endsWith('/');
+  if (isNav || NETWORK_FIRST.test(url.pathname)) {
+    event.respondWith(networkFirst(req, isNav));
+  } else {
+    event.respondWith(staleWhileRevalidate(req));
+  }
+});
+
+async function networkFirst(req, isNav) {
+  const cache = await caches.open(CACHE);
+  try {
+    const fresh = await fetch(req);
+    if (fresh.ok) cache.put(req, fresh.clone());
+    return fresh;
+  } catch {
+    const cached =
+      (await cache.match(req, { ignoreSearch: true })) ||
+      (await cache.match(new URL(req.url).pathname));
+    if (cached) return cached;
+    if (isNav) {
+      const offline = await cache.match('/offline.html');
+      if (offline) return offline;
+    }
+    return Response.error();
+  }
+}
+
+async function staleWhileRevalidate(req) {
+  const cache = await caches.open(CACHE);
+  const cached = await cache.match(req);
+  const network = fetch(req)
+    .then((res) => { if (res.ok) cache.put(req, res.clone()); return res; })
+    .catch(() => null);
+  return cached || (await network) || Response.error();
+}
+```
+
+---
+
+## `README.md`
+
+```md
+# Edu Dash — many installable PWAs on one Netlify site
+
+Single origin (`edu-dash.netlify.app` or your custom domain). Each app under
+`/<appId>/` has its own manifest (`id`, `start_url`, `scope`) → each installs
+to the home screen separately.
+
+## Deploy (GitHub → Netlify)
+
+1. Push this repo to GitHub.
+2. Netlify → Add new site → Import from GitHub.
+3. Build command: *(empty)*. Publish directory: `.`  (already set in `netlify.toml`).
+4. Deploy.
+
+## Add an app
+
+    node tools/add-app.mjs math "Math Edu Dashboard" en ltr "#c0392b"
+
+Creates `math/` with index, manifest, header/footer partials, a sample module
+(`math/sample-module/lesson1.html`) demonstrating `data-include` + `window.I18N`,
+and appends an entry to `apps.json`.
+
+If you don't use the script: copy `arabic/` → `math/`, replace `arabic` → `math`,
+edit `name`/`short_name`/`lang`/`dir`/`theme_color`, append one object to `apps.json`.
+
+## Icons (you provide)
+
+`<app>/assets/icons/icon-96x96.png`, `icon-144x144.png`, `icon-192x192.png`,
+`icon-512x512.png` — square PNG. Add maskable variants later if desired.
+
+## File contracts (short)
+
+- **Partials**: `<div data-include="/absolute/path.html"></div>` — resolved
+  by `shared/include.js` before the `partials:ready` event fires.
+- **Translations**: each HTML page sets `window.I18N = { key: {en,fr,ar} }`
+  and tags elements with `data-i18n="key"` (or `data-i18n-attr="aria-label:key"`
+  for attributes). Missing keys fall back to the element's current text.
+- **Storage**: always via `prefs.*` or `appData.*` from `shared/store.js`.
+  Namespace: cross-app `edu:*`, per-app `<appId>:*`. Never call
+  `localStorage` directly from page scripts.
+- **Auth**: only via `shared/auth.js`. `edu:session` is managed by it alone.
+- **Header controls**: IDs `#theme-btn`, `#lang-sel`, `#user-chip`,
+  `#install-btn` are auto-wired by `initHeader()` / `initInstallButton()`.
+
+## Offline + updates
+
+- HTML / CSS / JS / JSON: **network-first** → new deploys visible on next
+  visit; every visited page cached offline.
+- Images / fonts: **stale-while-revalidate** → fast, refreshed in background.
+- Partials are cached when first fetched (i.e. first time a page using them
+  is viewed online). A page that has never been opened online is *not* offline-
+  available — its partials don't exist yet. This is intentional; the SW's
+  `SHELL` covers the shared bootstrap.
+- Service worker takes over immediately (`skipWaiting` + `clients.claim`).
+- Bump `VERSION` in `sw.js` **only** when you change SW logic or need to
+  purge the whole cache. Content edits do not need a bump.
+
+## Adding nested pages
+
+Drop files anywhere under `<app>/`, e.g. `/arabic/year7/module1/lesson1.html`,
+and:
+- include `<script src="/register-sw.js" defer></script>`
+- include your app header/footer partials and (optionally) module partials
+- declare `window.I18N` for the page
+- import `shared/ui.js` + `shared/install.js` for the header controls
+- put a module-scoped `styles.css` and any specific JS (e.g. canvas drawing)
+  next to the page
+
+## Test locally
+
+    npx serve .
+
+Open `http://localhost:3000/arabic/`. Service workers require localhost or
+HTTPS. DevTools → Application → Manifest / Service Workers / Cache Storage.
+
+Debug cross-app state: open `/shared/debug.html`.
+
+## Important
+
+- Storage (localStorage / IndexedDB / cookies / Cache) is **shared by origin**
+  across all apps. Keys are namespaced (`edu:*`, `arabic:*`, `philo:*`, …).
+- Uninstalling one app with "clear data" wipes the origin's data for **all**
+  apps; offline pages re-cache on the next online visit.
+- Auth in `local` mode stores a session in `localStorage['edu:session']` —
+  fine for testing, **never** for real credentials. Switch `CONFIG.backend`
+  to `'supabase'` when ready; the schema + wiring are documented at the end
+  of the setup messages.
+
+## Files at a glance
+
+    versions.log          progression log
+    netlify.toml          headers + build config
+    apps.json             launcher + SW source of truth
+    index.html            launcher (not installable)
+    offline.html          fallback for uncached navigation
+    register-sw.js        one-liner registration for every page
+    sw.js                 single root-scoped SW
+    shared/               cross-app modules (storage, auth, i18n, partials, UI)
+    tools/add-app.mjs     scaffold a new app
+    <app>/                per-app (index, manifest, header/footer, assets, modules)
+    <app>/<module>/       per-module (header/footer, styles.css, *.js, pages)
+```
+
+---
+
+## `tools/add-app.mjs`
+
+```js
+#!/usr/bin/env node
+// Usage: node tools/add-app.mjs <id> "<Name>" [lang] [dir] [theme]
+// Creates <id>/ and appends to apps.json.
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
+const [id, name, lang = 'en', dir = 'ltr', theme = '#334155'] = process.argv.slice(2);
+if (!id || !name) {
+  console.error('Usage: node tools/add-app.mjs <id> "<Name>" [lang] [dir] [theme]');
+  process.exit(1);
+}
+if (!/^[a-z0-9-]+$/.test(id)) {
+  console.error('id must be lowercase letters, digits, hyphens');
+  process.exit(1);
+}
+const root = process.cwd();
+const appDir = path.join(root, id);
+if (existsSync(appDir)) { console.error(`Folder ${id}/ already exists`); process.exit(1); }
+
+const short = name.replace(/\s+Dashboard$/i, '');
+const KEY   = id;
+
+const indexHtml = `<!doctype html>
+<html lang="${lang}" dir="${dir}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>${name}</title>
+  <meta name="theme-color" content="${theme}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/${id}/manifest.webmanifest">
+  <link rel="icon" href="/${id}/assets/icons/icon-96x96.png" sizes="96x96" type="image/png">
+  <link rel="apple-touch-icon" href="/${id}/assets/icons/icon-192x192.png">
+  <link rel="stylesheet" href="/${id}/assets/css/styles.css">
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"${lang}"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+  <script>
+    window.I18N = {
+      'app.title':   { en: '${name}', fr: '${name}', ar: '${name}' },
+      'app.welcome': { en: 'Welcome', fr: 'Bienvenue', ar: 'مرحباً' },
+      'app.sample':  { en: 'Open sample module', fr: 'Ouvrir le module d\\u2019exemple',
+                       ar: 'افتح الوحدة التجريبية' },
+      'nav.signin':  { en: 'Sign in', fr: 'Connexion', ar: 'تسجيل الدخول' },
+      'nav.install': { en: 'Install', fr: 'Installer', ar: 'تثبيت' },
+      'nav.addHome': { en: 'Add to Home', fr: 'Ajouter à l\\u2019accueil', ar: 'أضف للشاشة' },
+      'nav.lang':    { en: 'Language', fr: 'Langue', ar: 'اللغة' },
+      'nav.theme':   { en: 'Toggle theme', fr: 'Changer de thème', ar: 'تبديل المظهر' }
+    };
+  </script>
+</head>
+<body>
+  <div data-include="/${id}/header.html"></div>
+  <main>
+    <h1 data-i18n="app.welcome">Welcome</h1>
+    <p><a href="/${id}/sample-module/lesson1.html" data-i18n="app.sample">Open sample module</a></p>
+  </main>
+  <div data-include="/${id}/footer.html"></div>
+
+  <script src="/shared/include.js"></script>
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import { initHeader, externalAppLink } from '/shared/ui.js';
+    import { initInstallButton } from '/shared/install.js';
+    import '/shared/i18n.js';
+    initHeader(); initInstallButton();
+  </script>
+</body>
+</html>
+`;
+
+const headerHtml = `<header>
+  <strong data-i18n="app.title">${short}</strong>
+  <div class="hdr-actions">
+    <button id="theme-btn" aria-label="Toggle theme" data-i18n-attr="aria-label:nav.theme" type="button">☾</button>
+    <select id="lang-sel" aria-label="Language" data-i18n-attr="aria-label:nav.lang">
+      <option value="en">English</option>
+      <option value="fr">Français</option>
+      <option value="ar">العربية</option>
+    </select>
+    <button id="install-btn" hidden type="button" data-i18n="nav.install">Install</button>
+    <button id="user-chip" type="button" data-i18n="nav.signin">Sign in</button>
+  </div>
+</header>
+`;
+
+const footerHtml = `<footer>
+  <small>${short} · ${new Date().getFullYear()}</small>
+</footer>
+`;
+
+const manifest = {
+  id: `/${id}/`, name, short_name: short, lang, dir,
+  start_url: `/${id}/`, scope: `/${id}/`,
+  display: 'standalone', orientation: 'any',
+  theme_color: theme, background_color: '#f6f7f9',
+  categories: ['education'],
+  icons: [96, 144, 192, 512].map((s) => ({
+    src: `/${id}/assets/icons/icon-${s}x${s}.png`,
+    sizes: `${s}x${s}`, type: 'image/png', purpose: 'any'
+  })),
+  shortcuts: [
+    { name: 'Sample module', short_name: 'Sample',
+      url: `/${id}/sample-module/lesson1.html`,
+      icons: [{ src: `/${id}/assets/icons/icon-96x96.png`, sizes: '96x96' }] }
+  ]
+};
+
+const appCss = `:root { --brand: ${theme}; --bg:#f6f7f9; --fg:#1b1f24; --card:#ffffff; --line:#e3e6ea; --muted:#667; }
+html[data-mode="dark"] { --bg:#0f1216; --fg:#e9edf2; --card:#171c22; --line:#242b33; --muted:#8a95a1; }
+* { box-sizing: border-box; }
+body { margin:0; min-height:100dvh; background:var(--bg); color:var(--fg);
+       font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+       transition: background .15s, color .15s; }
+header { background:var(--brand); color:#fff; padding:1rem 1.25rem;
+         padding-top:calc(1rem + env(safe-area-inset-top));
+         display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap; }
+.hdr-actions { display:flex; gap:.5rem; align-items:center; }
+.hdr-actions button, .hdr-actions select {
+  background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.25);
+  padding:.4rem .7rem; border-radius:8px; font-size:.9rem; cursor:pointer;
+}
+.hdr-actions button:hover, .hdr-actions select:hover { background:rgba(255,255,255,.25); }
+main { padding:1.25rem; padding-bottom:calc(1.25rem + env(safe-area-inset-bottom)); }
+a { color:var(--brand); }
+html[data-mode="dark"] a { color:#4ecfa3; }
+footer { padding:1rem 1.25rem; color:var(--muted); border-top:1px solid var(--line); }
+[data-signedin="1"] { background:rgba(255,255,255,.35) !important; }
+`;
+
+const appJs = `// ${name} — app entry. Replace with real logic.
+// Always go through shared/store.js; never touch localStorage directly.
+import { appData } from '/shared/store.js';
+
+const KEY = 'visits';
+(async () => {
+  const n = (await appData.get('${KEY}', KEY, 0)) + 1;
+  await appData.set('${KEY}', KEY, n);
+  console.log('${id} loaded, visits:', n);
+})();
+`;
+
+const moduleHeader = `<nav class="mod-hdr">
+  <a href="/${id}/">← <span data-i18n="mod.back">Back to ${short}</span></a>
+</nav>
+`;
+
+const moduleFooter = `<footer class="mod-ftr">
+  <small data-i18n="mod.copy">${short} · sample module</small>
+</footer>
+`;
+
+const moduleCss = `/* Sample-module-scoped styles */
+.mod-hdr { padding:.75rem 1.25rem; border-bottom:1px solid var(--line); }
+.mod-hdr a { text-decoration:none; }
+.mod-ftr { margin-top:1.5rem; }
+canvas { background:var(--card); border:1px solid var(--line); border-radius:12px; display:block; max-width:100%; }
+`;
+
+const moduleJs = `// Sample module-specific JS (canvas drawing). Import only on pages that need it.
+export function attachCanvas(canvas) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width  = Math.round(rect.width  * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  ctx.scale(dpr, dpr);
+
+  let drawing = false;
+  const draw = (x, y) => {
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+  const pos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    return [e.clientX - r.left, e.clientY - r.top];
+  };
+  canvas.addEventListener('pointerdown', (e) => {
+    drawing = true;
+    ctx.beginPath();
+    ctx.moveTo(...pos(e));
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!drawing) return;
+    draw(...pos(e));
+  });
+  const end = () => { drawing = false; };
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', end);
+}
+`;
+
+const lessonHtml = `<!doctype html>
+<html lang="${lang}" dir="${dir}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lesson 1 — ${name}</title>
+  <meta name="theme-color" content="${theme}">
+  <link rel="stylesheet" href="/${id}/assets/css/styles.css">
+  <link rel="stylesheet" href="/${id}/sample-module/styles.css">
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"${lang}"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+  <script>
+    window.I18N = {
+      'page.title':  { en: 'Lesson 1 — Drawing', fr: 'Leçon 1 — Dessin', ar: 'الدرس الأول — الرسم' },
+      'lesson.hint': { en: 'Draw with the pointer.', fr: 'Dessinez avec le pointeur.',
+                       ar: 'ارسم بمؤشر الفأرة أو الإصبع.' },
+      'lesson.clear':{ en: 'Clear', fr: 'Effacer', ar: 'مسح' },
+      'mod.back':    { en: 'Back to ${short}', fr: 'Retour à ${short}', ar: 'العودة إلى ${short}' },
+      'mod.copy':    { en: '${short} · sample module', fr: '${short} · module exemple',
+                       ar: '${short} · وحدة تجريبية' }
+    };
+  </script>
+</head>
+<body>
+  <div data-include="/${id}/header.html"></div>
+  <div data-include="/${id}/sample-module/header.html"></div>
+
+  <main>
+    <h1 data-i18n="page.title">Lesson 1 — Drawing</h1>
+    <p data-i18n="lesson.hint">Draw with the pointer.</p>
+    <canvas id="board" height="320" style="width:100%;height:320px;"></canvas>
+    <p><button id="clear" class="btn" data-i18n="lesson.clear" type="button">Clear</button></p>
+  </main>
+
+  <div data-include="/${id}/sample-module/footer.html"></div>
+  <div data-include="/${id}/footer.html"></div>
+
+  <script src="/shared/include.js"></script>
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import { initHeader } from '/shared/ui.js';
+    import { initInstallButton } from '/shared/install.js';
+    import '/shared/i18n.js';
+    import { attachCanvas } from '/${id}/sample-module/draw.js';
+
+    initHeader(); initInstallButton();
+
+    const canvas = document.getElementById('board');
+    attachCanvas(canvas);
+    document.getElementById('clear').addEventListener('click', () => {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+  </script>
+</body>
+</html>
+`;
+
+// ── write files ────────────────────────────────────────────
+await mkdir(path.join(appDir, 'assets/css'), { recursive: true });
+await mkdir(path.join(appDir, 'assets/js'),  { recursive: true });
+await mkdir(path.join(appDir, 'assets/icons'), { recursive: true });
+await mkdir(path.join(appDir, 'sample-module'), { recursive: true });
+
+await writeFile(path.join(appDir, 'index.html'), indexHtml);
+await writeFile(path.join(appDir, 'header.html'), headerHtml);
+await writeFile(path.join(appDir, 'footer.html'), footerHtml);
+await writeFile(path.join(appDir, 'manifest.webmanifest'), JSON.stringify(manifest, null, 2) + '\n');
+await writeFile(path.join(appDir, 'assets/css/styles.css'), appCss);
+await writeFile(path.join(appDir, 'assets/js/app.js'), appJs);
+
+await writeFile(path.join(appDir, 'sample-module/header.html'), moduleHeader);
+await writeFile(path.join(appDir, 'sample-module/footer.html'), moduleFooter);
+await writeFile(path.join(appDir, 'sample-module/styles.css'), moduleCss);
+await writeFile(path.join(appDir, 'sample-module/draw.js'), moduleJs);
+await writeFile(path.join(appDir, 'sample-module/lesson1.html'), lessonHtml);
+
+// ── update apps.json ───────────────────────────────────────
+const appsPath = path.join(root, 'apps.json');
+const data = JSON.parse(await readFile(appsPath, 'utf8'));
+data.apps = data.apps.filter((a) => a.id !== id);
+data.apps.push({
+  id, name, short_name: short, path: `/${id}/`,
+  lang, dir, theme_color: theme,
+  icon: `/${id}/assets/icons/icon-192x192.png`
+});
+data.apps.sort((a, b) => a.id.localeCompare(b.id));
+await writeFile(appsPath, JSON.stringify(data, null, 2) + '\n');
+
+console.log(`✓ Created ${id}/ (index, manifest, partials, sample-module)`);
+console.log(`✓ Registered in apps.json`);
+console.log(`→ Drop icon-{96,144,192,512}x{...}.png into ${id}/assets/icons/`);
+```
+
+> Note: the sample module uses `draw.js` as its filename, matching the tree in message 1. The script also emits `lesson1.html` with a small canvas demo so you can see partials + per-page i18n + module-specific JS working end to end.
+
+---
+
+## Recap of what's now in place
+
+| File | Role | Depends on |
+|---|---|---|
+| `netlify.toml` | headers + publish dir | — |
+| `apps.json` | launcher + SW source of truth | — |
+| `index.html` | launcher, i18n, target=_blank cards | `shared/ui.js`, `shared/i18n.js`, `shared/store.js` |
+| `offline.html` | nav fallback | `shared/i18n.js` |
+| `sw.js` v3 | single root-scoped SW | — |
+| `README.md` | deploy + contracts | — |
+| `tools/add-app.mjs` | scaffold app + sample module | `apps.json` |
+
+Contracts preserved exactly from message 2:
+- Storage → `prefs.*` / `appData.*` only.
+- i18n → `window.I18N` + `data-i18n` + `data-i18n-attr`.
+- Partials → `<div data-include="/abs/path.html">`.
+- Header control IDs → `#theme-btn`, `#lang-sel`, `#user-chip`, `#install-btn`.
+
+---
+
+# v0.0.6 — message 4 of 6 · `arabic/` app-level
+
+Delivers: `arabic/index.html` · `arabic/manifest.webmanifest` · `arabic/header.html` · `arabic/footer.html` · `arabic/assets/css/styles.css` · `arabic/assets/js/app.js`.
+
+Contracts used:
+- Partials via `<div data-include="/arabic/header.html">` etc.
+- `window.I18N` per page — includes the keys the header/footer partials use (`nav.*`, `app.title`, `footer.copy`) because i18n is page-scoped.
+- Header IDs `#theme-btn`, `#lang-sel`, `#install-btn`, `#user-chip` present in `header.html`, wired by `shared/ui.js` + `shared/install.js`.
+- Cross-app link handled by `externalAppLink('philo')` plus a direct `target="_blank"` for safety.
+- Storage access only through `appData.*` in `app.js`.
+
+---
+
+## `arabic/header.html`
+
+```html
+<header>
+  <strong data-i18n="app.title">Arabic Edu</strong>
+  <div class="hdr-actions">
+    <button id="theme-btn" type="button"
+            aria-label="Toggle theme"
+            data-i18n-attr="aria-label:nav.theme">☾</button>
+    <select id="lang-sel" aria-label="Language"
+            data-i18n-attr="aria-label:nav.lang">
+      <option value="ar">العربية</option>
+      <option value="fr">Français</option>
+      <option value="en">English</option>
+    </select>
+    <button id="install-btn" type="button" hidden
+            data-i18n="nav.install">Install</button>
+    <button id="user-chip" type="button"
+            data-i18n="nav.signin">Sign in</button>
+  </div>
+</header>
+```
+
+---
+
+## `arabic/footer.html`
+
+```html
+<footer>
+  <small>
+    <span data-i18n="footer.copy">Arabic Edu</span>
+    · <span data-i18n="footer.rights">All rights reserved</span>
+  </small>
+</footer>
+```
+
+> No inline `<script>` in partials — scripts inside `innerHTML`-injected HTML don't execute. Anything dynamic (year, etc.) is filled by the page's entry module after `partials:ready`.
+
+---
+
+## `arabic/manifest.webmanifest`
+
+```json
+{
+  "id": "/arabic/",
+  "name": "Arabic Edu Dashboard",
+  "short_name": "Arabic Edu",
+  "description": "Arabic education dashboard",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/arabic/",
+  "scope": "/arabic/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0a7d5a",
+  "background_color": "#f6f7f9",
+  "categories": ["education"],
+  "icons": [
+    { "src": "/arabic/assets/icons/icon-96x96.png",   "sizes": "96x96",   "type": "image/png", "purpose": "any" },
+    { "src": "/arabic/assets/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "/arabic/assets/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/arabic/assets/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Lesson 1",
+      "short_name": "L1",
+      "url": "/arabic/year7/module1/lesson1.html",
+      "icons": [{ "src": "/arabic/assets/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Lesson 2",
+      "short_name": "L2",
+      "url": "/arabic/year7/module1/lesson2.html",
+      "icons": [{ "src": "/arabic/assets/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [
+    { "src": "/arabic/assets/screenshots/home.png",   "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow" },
+    { "src": "/arabic/assets/screenshots/lesson.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide" }
+  ]
+}
+```
+
+> `screenshots` are **optional** for installability — Chrome/Edge just show richer install UI if the files exist. If you don't want to produce them yet, delete the `screenshots` array; nothing else changes. If you keep it, create `/arabic/assets/screenshots/{home,lesson}.png` at those exact sizes.
+
+---
+
+## `arabic/index.html`
+
+```html
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Arabic Edu Dashboard</title>
+  <meta name="theme-color" content="#0a7d5a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Arabic Edu">
+  <link rel="manifest" href="/arabic/manifest.webmanifest">
+  <link rel="icon" href="/arabic/assets/icons/icon-96x96.png" sizes="96x96" type="image/png">
+  <link rel="apple-touch-icon" href="/arabic/assets/icons/icon-192x192.png">
+  <link rel="stylesheet" href="/arabic/assets/css/styles.css">
+
+  <!-- Sync theme + lang before paint so there's no flash -->
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"ar"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+
+  <!-- Page-scoped translations. Includes keys used by header/footer partials. -->
+  <script>
+    window.I18N = {
+      // app / header partial
+      'app.title':    { en: 'Arabic Edu',     fr: 'Éduc. Arabe',        ar: 'تعليم العربية' },
+      'nav.signin':   { en: 'Sign in',        fr: 'Connexion',          ar: 'تسجيل الدخول' },
+      'nav.install':  { en: 'Install',        fr: 'Installer',          ar: 'تثبيت' },
+      'nav.addHome':  { en: 'Add to Home',    fr: 'Ajouter à l\u2019accueil', ar: 'أضف للشاشة' },
+      'nav.lang':     { en: 'Language',       fr: 'Langue',             ar: 'اللغة' },
+      'nav.theme':    { en: 'Toggle theme',   fr: 'Changer de thème',   ar: 'تبديل المظهر' },
+      // footer partial
+      'footer.copy':  { en: 'Arabic Edu',     fr: 'Éduc. Arabe',        ar: 'تعليم العربية' },
+      'footer.rights':{ en: 'All rights reserved', fr: 'Tous droits réservés', ar: 'كل الحقوق محفوظة' },
+      // page
+      'page.welcome':    { en: 'Welcome',        fr: 'Bienvenue',             ar: 'مرحباً' },
+      'page.subtitle':   { en: 'Pick a module to start',
+                            fr: 'Choisissez un module pour commencer',
+                            ar: 'اختر وحدة للبدء' },
+      'page.modules':    { en: 'Modules',        fr: 'Modules',               ar: 'الوحدات' },
+      'page.y7m1':       { en: 'Year 7 · Module 1',
+                            fr: 'Année 7 · Module 1',
+                            ar: 'السنة 7 · الوحدة 1' },
+      'page.lesson1':    { en: 'Lesson 1 — Introduction',
+                            fr: 'Leçon 1 — Introduction',
+                            ar: 'الدرس الأول — مقدمة' },
+      'page.lesson2':    { en: 'Lesson 2 — Practice',
+                            fr: 'Leçon 2 — Exercices',
+                            ar: 'الدرس الثاني — تمارين' },
+      'page.otherApps':  { en: 'Other apps',     fr: 'Autres apps',           ar: 'تطبيقات أخرى' },
+      'page.philo':      { en: 'Philo Edu ↗',    fr: 'Philo Édu ↗',           ar: 'فلسفة ↗' },
+      'page.visits':     { en: 'Visits on this device',
+                            fr: 'Visites sur cet appareil',
+                            ar: 'الزيارات على هذا الجهاز' }
+    };
+  </script>
+</head>
+<body>
+  <div data-include="/arabic/header.html"></div>
+
+  <main>
+    <h1 data-i18n="page.welcome">Welcome</h1>
+    <p data-i18n="page.subtitle">Pick a module to start</p>
+
+    <h2 data-i18n="page.modules">Modules</h2>
+    <section class="module-list">
+      <a class="module-card" href="/arabic/year7/module1/lesson1.html">
+        <strong data-i18n="page.y7m1">Year 7 · Module 1</strong>
+        <small  data-i18n="page.lesson1">Lesson 1 — Introduction</small>
+      </a>
+      <a class="module-card" href="/arabic/year7/module1/lesson2.html">
+        <strong data-i18n="page.y7m1">Year 7 · Module 1</strong>
+        <small  data-i18n="page.lesson2">Lesson 2 — Practice</small>
+      </a>
+    </section>
+
+    <h2 data-i18n="page.otherApps">Other apps</h2>
+    <p>
+      <a data-app-link="philo"
+         href="/philo/"
+         target="_blank" rel="noopener noreferrer"
+         data-i18n="page.philo">Philo Edu ↗</a>
+    </p>
+
+    <p class="muted">
+      <small>
+        <span data-i18n="page.visits">Visits on this device</span>:
+        <span id="visits">–</span>
+      </small>
+    </p>
+  </main>
+
+  <div data-include="/arabic/footer.html"></div>
+
+  <script src="/shared/include.js"></script>
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import { initHeader, externalAppLink } from '/shared/ui.js';
+    import { initInstallButton } from '/shared/install.js';
+    import '/shared/i18n.js';
+    import { trackVisit } from '/arabic/assets/js/app.js';
+
+    initHeader();
+    initInstallButton();
+    externalAppLink('philo');
+
+    trackVisit().then((n) => {
+      const el = document.getElementById('visits');
+      if (el) el.textContent = String(n);
+    }).catch(() => {});
+  </script>
+</body>
+</html>
+```
+
+---
+
+## `arabic/assets/css/styles.css`
+
+```css
+/* arabic — app-level styles. Module-level styles live in the module folder. */
+
+:root {
+  --brand: #0a7d5a;
+  --bg:    #f6f7f9;
+  --fg:    #1b1f24;
+  --card:  #ffffff;
+  --line:  #e3e6ea;
+  --muted: #667;
+}
+html[data-mode="dark"] {
+  --bg:    #0f1216;
+  --fg:    #e9edf2;
+  --card:  #171c22;
+  --line:  #242b33;
+  --muted: #8a95a1;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans Arabic", sans-serif;
+  transition: background .15s, color .15s;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── header (from partial) ───────────────────────────────── */
+header {
+  background: var(--brand);
+  color: #fff;
+  padding: 1rem 1.25rem;
+  padding-top: calc(1rem + env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+header strong { font-size: 1.05rem; }
+
+.hdr-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.hdr-actions button,
+.hdr-actions select {
+  background: rgba(255, 255, 255, .15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .25);
+  padding: .4rem .7rem;
+  border-radius: 8px;
+  font-size: .9rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.hdr-actions button:hover,
+.hdr-actions select:hover { background: rgba(255, 255, 255, .25); }
+.hdr-actions [data-signedin="1"] { background: rgba(255, 255, 255, .35); }
+.hdr-actions [hidden] { display: none !important; }
+
+/* ── main ─────────────────────────────────────────────────── */
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.25rem;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+}
+
+h1 { margin: 0 0 .25rem; }
+h2 { margin: 1.75rem 0 .75rem; font-size: 1.1rem; }
+
+a { color: var(--brand); }
+html[data-mode="dark"] a { color: #4ecfa3; }
+
+.muted { color: var(--muted); }
+
+/* ── module list ─────────────────────────────────────────── */
+.module-list {
+  display: grid;
+  gap: .65rem;
+}
+.module-card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: .9rem 1rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .15s;
+}
+.module-card:hover { border-color: var(--brand); }
+.module-card strong { display: block; }
+.module-card small  { color: var(--muted); }
+
+/* ── generic button ──────────────────────────────────────── */
+.btn {
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: .55rem .9rem;
+  font-size: .95rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn[disabled] { opacity: .55; cursor: not-allowed; }
+
+/* ── footer (from partial) ───────────────────────────────── */
+footer {
+  padding: 1rem 1.25rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  text-align: center;
+  font-size: .85rem;
+}
+```
+
+---
+
+## `arabic/assets/js/app.js`
+
+```js
+// arabic/assets/js/app.js — app entry helpers.
+// Storage goes only through shared/store.js. Never touch localStorage directly.
+
+import { appData } from '/shared/store.js';
+
+const APP = 'arabic';
+
+/** Increment and return the per-device visit counter for this app. */
+export async function trackVisit() {
+  const n = ((await appData.get(APP, 'visits', 0)) || 0) + 1;
+  await appData.set(APP, 'visits', n);
+  return n;
+}
+
+/** Read progress object for a module (e.g. 'year7/module1'). */
+export async function getProgress(moduleId) {
+  return (await appData.get(APP, `progress:${moduleId}`, {})) || {};
+}
+
+/** Merge a patch into the module's progress object and persist. */
+export async function setProgress(moduleId, patch) {
+  const cur  = await getProgress(moduleId);
+  const next = { ...cur, ...patch };
+  await appData.set(APP, `progress:${moduleId}`, next);
+  return next;
+}
+
+/** Mark a lesson complete for a module. */
+export async function markLesson(moduleId, lessonId, done = true) {
+  const cur = await getProgress(moduleId);
+  const lessons = { ...(cur.lessons || {}), [lessonId]: !!done };
+  return setProgress(moduleId, { lessons });
+}
+```
+
+---
+
+## What message 5 will add
+
+`arabic/year7/module1/`:
+- `header.html` — module breadcrumb partial (back link to `/arabic/`)
+- `footer.html` — module footer partial
+- `styles.css` — module-scoped styles (canvas, exercise layout)
+- `draw.js` — module-specific JS (canvas drawing demo)
+- `lesson1.html` — full page with `window.I18N`, includes app header + module header + module footer + app footer, imports `draw.js`
+- `lesson2.html` — second lesson showing a variant layout
+
+Both pages will demonstrate the full stacking: **app partial → module partial → page content → module partial → app partial**, with all `data-i18n` keys defined **on the page itself**.
+
+---
+
+# v0.0.6 — message 5 of 6 · `arabic/year7/module1/`
+
+Delivers: `header.html` · `footer.html` · `styles.css` · `draw.js` · `lesson1.html` · `lesson2.html`.
+
+Contracts used:
+- **Stacking** — each page is: app header partial → module header partial → page → module footer partial → app footer partial.
+- **i18n is page-local.** Each page defines the **complete** `window.I18N` — app partial keys (`app.*`, `nav.*`, `footer.*`), module partial keys (`mod.*`), and its own `page.*` keys. That's the contract from message 2, and it keeps partials reusable without a hidden dependency.
+- **Module-scoped assets.** `styles.css` and `draw.js` live *inside* the module folder, not `assets/`. They only load on module pages.
+- **Storage via `appData` / `markLesson`.** No `localStorage` calls.
+- **Arrow direction** handled in CSS via `[dir="rtl"] .mod-back::before`.
+
+---
+
+## `arabic/year7/module1/header.html`
+
+```html
+<nav class="mod-hdr" aria-label="Module navigation"
+     data-i18n-attr="aria-label:mod.nav">
+  <a class="mod-back" href="/arabic/">
+    <span data-i18n="mod.back">Back to Arabic Edu</span>
+  </a>
+  <span class="mod-title" data-i18n="mod.title">Year 7 · Module 1</span>
+</nav>
+```
+
+---
+
+## `arabic/year7/module1/footer.html`
+
+```html
+<footer class="mod-ftr">
+  <small>
+    <span data-i18n="mod.copy">Year 7 · Module 1</span>
+    ·
+    <a href="/arabic/year7/module1/lesson1.html" data-i18n="mod.lesson1">Lesson 1</a>
+    ·
+    <a href="/arabic/year7/module1/lesson2.html" data-i18n="mod.lesson2">Lesson 2</a>
+  </small>
+</footer>
+```
+
+---
+
+## `arabic/year7/module1/styles.css`
+
+```css
+/* module1 — scoped styles. Loaded only on pages in this module. */
+
+/* ── module header partial ───────────────────────────────── */
+.mod-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .75rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+  font-size: .95rem;
+}
+.mod-back {
+  color: var(--brand);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+html[data-mode="dark"] .mod-back { color: #4ecfa3; }
+
+/* Bidirectional "back" arrow: ← for LTR, → for RTL */
+.mod-back::before { content: "← "; }
+[dir="rtl"] .mod-back::before { content: "→ "; }
+
+.mod-title { font-weight: 600; }
+
+/* ── module footer partial ───────────────────────────────── */
+.mod-ftr {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  text-align: center;
+  font-size: .85rem;
+}
+.mod-ftr a { color: var(--brand); text-decoration: none; }
+.mod-ftr a:hover { text-decoration: underline; }
+html[data-mode="dark"] .mod-ftr a { color: #4ecfa3; }
+
+/* ── canvas demo (lesson 1) ──────────────────────────────── */
+.canvas-wrap { position: relative; }
+
+canvas.board {
+  display: block;
+  width: 100%;
+  height: 320px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  touch-action: none;           /* critical: finger drag draws, doesn't scroll */
+  cursor: crosshair;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.btn-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .75rem; }
+
+/* ── exercise (lesson 2) ─────────────────────────────────── */
+.exercise { display: grid; gap: 1rem; margin-top: 1rem; }
+
+.q-block {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+}
+.q-block h3 { margin: 0 0 .75rem; font-size: 1rem; font-weight: 600; }
+
+.q-options { display: grid; gap: .4rem; }
+.q-options label {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .45rem .6rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .12s;
+}
+.q-options label:hover { background: var(--line); }
+.q-options input[type="radio"] { accent-color: var(--brand); }
+
+.q-feedback { margin: .6rem 0 0; font-size: .9rem; min-height: 1.2em; }
+.q-feedback[data-state="ok"] { color: #0a7d5a; }
+.q-feedback[data-state="ko"] { color: #b00020; }
+html[data-mode="dark"] .q-feedback[data-state="ok"] { color: #4ecfa3; }
+html[data-mode="dark"] .q-feedback[data-state="ko"] { color: #ff6b81; }
+```
+
+---
+
+## `arabic/year7/module1/draw.js`
+
+```js
+// arabic/year7/module1/draw.js — canvas drawing helper, scoped to the module.
+// Imported only by lesson1.html. Kept in module folder (not /assets) on purpose:
+// it's specific to this module's UX and should ship with it.
+
+/**
+ * Attach pointer drawing to a canvas. Handles HiDPI + resize + pointer capture.
+ * @param {HTMLCanvasElement} canvas
+ * @param {{ color?: string, width?: number }} [opts]
+ * @returns {() => void}  teardown function
+ */
+export function attachCanvas(canvas, opts = {}) {
+  if (!canvas) return () => {};
+  const ctx = canvas.getContext('2d');
+  const color = opts.color
+    || getComputedStyle(document.documentElement)
+         .getPropertyValue('--fg').trim()
+    || '#1b1f24';
+  const width = opts.width || 2.5;
+
+  ctx.lineCap  = 'round';
+  ctx.lineJoin = 'round';
+
+  let drawing = false;
+  let last = null;
+
+  function resize() {
+    const dpr  = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    // snapshot current drawing so resize doesn't erase it
+    const prev = document.createElement('canvas');
+    prev.width  = canvas.width;
+    prev.height = canvas.height;
+    if (prev.width && prev.height) {
+      prev.getContext('2d').drawImage(canvas, 0, 0);
+    }
+
+    canvas.width  = Math.max(1, Math.round(rect.width  * dpr));
+    canvas.height = Math.max(1, Math.round(rect.height * dpr));
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineCap  = 'round';
+    ctx.lineJoin = 'round';
+
+    if (prev.width && prev.height) {
+      ctx.drawImage(prev, 0, 0, prev.width / dpr, prev.height / dpr);
+    }
+  }
+
+  function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  function down(e) {
+    drawing = true;
+    const p = pos(e);
+    last = p;
+    ctx.strokeStyle = color;
+    ctx.fillStyle   = color;
+    ctx.lineWidth   = width;
+    // dot at the tap point
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, width / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    try { canvas.setPointerCapture(e.pointerId); } catch {}
+  }
+
+  function move(e) {
+    if (!drawing) return;
+    const p = pos(e);
+    ctx.beginPath();
+    ctx.moveTo(last ? last.x : p.x, last ? last.y : p.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    last = p;
+  }
+
+  function up(e) {
+    if (!drawing) return;
+    drawing = false;
+    last = null;
+    if (e && e.pointerId != null) {
+      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+    }
+  }
+
+  canvas.addEventListener('pointerdown', down);
+  canvas.addEventListener('pointermove', move);
+  canvas.addEventListener('pointerup', up);
+  canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('pointerleave', up);
+
+  // Initial size + follow layout changes
+  resize();
+  const ro = new ResizeObserver(() => resize());
+  ro.observe(canvas);
+
+  return function destroy() {
+    ro.disconnect();
+    canvas.removeEventListener('pointerdown', down);
+    canvas.removeEventListener('pointermove', move);
+    canvas.removeEventListener('pointerup', up);
+    canvas.removeEventListener('pointercancel', up);
+    canvas.removeEventListener('pointerleave', up);
+  };
+}
+
+/** Clear the canvas completely (resets transform too). */
+export function clearCanvas(canvas) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+}
+```
+
+---
+
+## `arabic/year7/module1/lesson1.html`
+
+```html
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lesson 1 — Introduction · Arabic Edu</title>
+  <meta name="theme-color" content="#0a7d5a">
+  <link rel="icon" href="/arabic/assets/icons/icon-96x96.png" sizes="96x96" type="image/png">
+  <link rel="apple-touch-icon" href="/arabic/assets/icons/icon-192x192.png">
+  <link rel="stylesheet" href="/arabic/assets/css/styles.css">
+  <link rel="stylesheet" href="/arabic/year7/module1/styles.css">
+
+  <!-- theme + lang pre-paint -->
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"ar"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+
+  <!-- All keys used anywhere on this page (partials + page). -->
+  <script>
+    window.I18N = {
+      // app header partial
+      'app.title':    { en: 'Arabic Edu',   fr: 'Éduc. Arabe',            ar: 'تعليم العربية' },
+      'nav.signin':   { en: 'Sign in',      fr: 'Connexion',              ar: 'تسجيل الدخول' },
+      'nav.install':  { en: 'Install',      fr: 'Installer',              ar: 'تثبيت' },
+      'nav.addHome':  { en: 'Add to Home',  fr: 'Ajouter à l\u2019accueil', ar: 'أضف للشاشة' },
+      'nav.lang':     { en: 'Language',     fr: 'Langue',                 ar: 'اللغة' },
+      'nav.theme':    { en: 'Toggle theme', fr: 'Changer de thème',       ar: 'تبديل المظهر' },
+      // app footer partial
+      'footer.copy':   { en: 'Arabic Edu',      fr: 'Éduc. Arabe',           ar: 'تعليم العربية' },
+      'footer.rights': { en: 'All rights reserved', fr: 'Tous droits réservés', ar: 'كل الحقوق محفوظة' },
+      // module header partial
+      'mod.nav':      { en: 'Module navigation', fr: 'Navigation du module', ar: 'تنقل الوحدة' },
+      'mod.back':     { en: 'Back to Arabic Edu', fr: 'Retour à Éduc. Arabe', ar: 'العودة إلى تعليم العربية' },
+      'mod.title':    { en: 'Year 7 · Module 1', fr: 'Année 7 · Module 1',   ar: 'السنة 7 · الوحدة 1' },
+      // module footer partial
+      'mod.copy':     { en: 'Year 7 · Module 1', fr: 'Année 7 · Module 1',   ar: 'السنة 7 · الوحدة 1' },
+      'mod.lesson1':  { en: 'Lesson 1',          fr: 'Leçon 1',              ar: 'الدرس 1' },
+      'mod.lesson2':  { en: 'Lesson 2',          fr: 'Leçon 2',              ar: 'الدرس 2' },
+      // page
+      'page.title':        { en: 'Lesson 1 — Introduction',
+                              fr: 'Leçon 1 — Introduction',
+                              ar: 'الدرس الأول — مقدمة' },
+      'page.hint':         { en: 'Draw with the pointer or finger.',
+                              fr: 'Dessinez avec le pointeur ou le doigt.',
+                              ar: 'ارسم بمؤشر الفأرة أو بإصبعك.' },
+      'page.boardLabel':   { en: 'Drawing board',
+                              fr: 'Tableau de dessin',
+                              ar: 'لوحة الرسم' },
+      'page.clear':        { en: 'Clear',         fr: 'Effacer',          ar: 'مسح' },
+      'page.markComplete': { en: 'Mark complete', fr: 'Marquer comme fait', ar: 'تحديد كمكتمل' },
+      'page.progress':     { en: 'Progress',      fr: 'Progression',      ar: 'التقدم' },
+      'page.completed':    { en: 'Completed',     fr: 'Terminé',          ar: 'مكتمل' },
+      'page.notStarted':   { en: 'Not started',   fr: 'Pas commencé',     ar: 'لم يبدأ' }
+    };
+  </script>
+</head>
+<body>
+  <div data-include="/arabic/header.html"></div>
+  <div data-include="/arabic/year7/module1/header.html"></div>
+
+  <main>
+    <h1 data-i18n="page.title">Lesson 1 — Introduction</h1>
+    <p  data-i18n="page.hint">Draw with the pointer or finger.</p>
+
+    <div class="canvas-wrap">
+      <canvas id="board" class="board"
+              aria-label="Drawing board"
+              data-i18n-attr="aria-label:page.boardLabel"></canvas>
+    </div>
+
+    <div class="btn-row">
+      <button id="clear"    class="btn" type="button" data-i18n="page.clear">Clear</button>
+      <button id="complete" class="btn" type="button" data-i18n="page.markComplete">Mark complete</button>
+    </div>
+
+    <p class="muted">
+      <small>
+        <span data-i18n="page.progress">Progress</span>:
+        <span id="status" aria-live="polite">—</span>
+      </small>
+    </p>
+  </main>
+
+  <div data-include="/arabic/year7/module1/footer.html"></div>
+  <div data-include="/arabic/footer.html"></div>
+
+  <script src="/shared/include.js"></script>
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import { initHeader } from '/shared/ui.js';
+    import { initInstallButton } from '/shared/install.js';
+    import { applyI18n } from '/shared/i18n.js';
+    import { attachCanvas, clearCanvas } from '/arabic/year7/module1/draw.js';
+    import { markLesson, getProgress } from '/arabic/assets/js/app.js';
+
+    initHeader();
+    initInstallButton();
+
+    const MODULE = 'year7/module1';
+    const LESSON = 'lesson1';
+
+    const canvas = document.getElementById('board');
+    attachCanvas(canvas, { width: 2.5 });
+
+    document.getElementById('clear').addEventListener('click', () => clearCanvas(canvas));
+
+    document.getElementById('complete').addEventListener('click', async () => {
+      await markLesson(MODULE, LESSON, true);
+      await renderStatus();
+    });
+
+    async function renderStatus() {
+      const p = await getProgress(MODULE);
+      const done = !!(p.lessons && p.lessons[LESSON]);
+      const el = document.getElementById('status');
+      if (!el) return;
+      el.dataset.i18n = done ? 'page.completed' : 'page.notStarted';
+      applyI18n(el);
+      el.style.color = done ? 'var(--brand)' : 'var(--muted)';
+    }
+
+    renderStatus();
+  </script>
+</body>
+</html>
+```
+
+---
+
+## `arabic/year7/module1/lesson2.html`
+
+```html
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lesson 2 — Practice · Arabic Edu</title>
+  <meta name="theme-color" content="#0a7d5a">
+  <link rel="icon" href="/arabic/assets/icons/icon-96x96.png" sizes="96x96" type="image/png">
+  <link rel="apple-touch-icon" href="/arabic/assets/icons/icon-192x192.png">
+  <link rel="stylesheet" href="/arabic/assets/css/styles.css">
+  <link rel="stylesheet" href="/arabic/year7/module1/styles.css">
+
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"ar"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+
+  <script>
+    window.I18N = {
+      // app header partial
+      'app.title':    { en: 'Arabic Edu',   fr: 'Éduc. Arabe',            ar: 'تعليم العربية' },
+      'nav.signin':   { en: 'Sign in',      fr: 'Connexion',              ar: 'تسجيل الدخول' },
+      'nav.install':  { en: 'Install',      fr: 'Installer',              ar: 'تثبيت' },
+      'nav.addHome':  { en: 'Add to Home',  fr: 'Ajouter à l\u2019accueil', ar: 'أضف للشاشة' },
+      'nav.lang':     { en: 'Language',     fr: 'Langue',                 ar: 'اللغة' },
+      'nav.theme':    { en: 'Toggle theme', fr: 'Changer de thème',       ar: 'تبديل المظهر' },
+      // app footer partial
+      'footer.copy':   { en: 'Arabic Edu',      fr: 'Éduc. Arabe',           ar: 'تعليم العربية' },
+      'footer.rights': { en: 'All rights reserved', fr: 'Tous droits réservés', ar: 'كل الحقوق محفوظة' },
+      // module header partial
+      'mod.nav':      { en: 'Module navigation', fr: 'Navigation du module', ar: 'تنقل الوحدة' },
+      'mod.back':     { en: 'Back to Arabic Edu', fr: 'Retour à Éduc. Arabe', ar: 'العودة إلى تعليم العربية' },
+      'mod.title':    { en: 'Year 7 · Module 1', fr: 'Année 7 · Module 1',   ar: 'السنة 7 · الوحدة 1' },
+      // module footer partial
+      'mod.copy':     { en: 'Year 7 · Module 1', fr: 'Année 7 · Module 1',   ar: 'السنة 7 · الوحدة 1' },
+      'mod.lesson1':  { en: 'Lesson 1',          fr: 'Leçon 1',              ar: 'الدرس 1' },
+      'mod.lesson2':  { en: 'Lesson 2',          fr: 'Leçon 2',              ar: 'الدرس 2' },
+      // page
+      'page.title':      { en: 'Lesson 2 — Practice',
+                            fr: 'Leçon 2 — Exercices',
+                            ar: 'الدرس الثاني — تمارين' },
+      'page.intro':      { en: 'Answer both questions, then check.',
+                            fr: 'Répondez aux deux questions, puis vérifiez.',
+                            ar: 'أجب عن السؤالين ثم تحقق.' },
+      'page.q1':         { en: 'What is the plural of كتاب (book)?',
+                            fr: 'Quel est le pluriel de كتاب (livre) ?',
+                            ar: 'ما جمع كلمة كتاب؟' },
+      'page.q1.a':       { en: 'كتب (books)',      fr: 'كتب (livres)',       ar: 'كتب' },
+      'page.q1.b':       { en: 'كاتب (writer)',    fr: 'كاتب (écrivain)',    ar: 'كاتب' },
+      'page.q1.c':       { en: 'مكتب (desk)',      fr: 'مكتب (bureau)',      ar: 'مكتب' },
+      'page.q2':         { en: 'What is the first letter of the Arabic alphabet?',
+                            fr: 'Quelle est la première lettre de l\u2019alphabet arabe ?',
+                            ar: 'ما أول حرف في الأبجدية العربية؟' },
+      'page.q2.a':       { en: 'ب (ba)',           fr: 'ب (ba)',             ar: 'ب' },
+      'page.q2.b':       { en: 'ا (alif)',         fr: 'ا (alif)',           ar: 'ا' },
+      'page.q2.c':       { en: 'م (meem)',         fr: 'م (mîm)',            ar: 'م' },
+      'page.check':      { en: 'Check answers',    fr: 'Vérifier',           ar: 'تحقق' },
+      'page.correct':    { en: 'Correct',          fr: 'Correct',            ar: 'صحيح' },
+      'page.incorrect':  { en: 'Try again',        fr: 'Réessayez',          ar: 'حاول مجدداً' },
+      'page.progress':   { en: 'Progress',         fr: 'Progression',        ar: 'التقدم' },
+      'page.completed':  { en: 'Completed',        fr: 'Terminé',            ar: 'مكتمل' },
+      'page.notStarted': { en: 'Not started',      fr: 'Pas commencé',       ar: 'لم يبدأ' }
+    };
+  </script>
+</head>
+<body>
+  <div data-include="/arabic/header.html"></div>
+  <div data-include="/arabic/year7/module1/header.html"></div>
+
+  <main>
+    <h1 data-i18n="page.title">Lesson 2 — Practice</h1>
+    <p  data-i18n="page.intro">Answer both questions, then check.</p>
+
+    <section class="exercise">
+      <div class="q-block" data-qid="q1">
+        <h3 data-i18n="page.q1">What is the plural of كتاب (book)?</h3>
+        <div class="q-options">
+          <label><input type="radio" name="q1" value="a"> <span data-i18n="page.q1.a">كتب</span></label>
+          <label><input type="radio" name="q1" value="b"> <span data-i18n="page.q1.b">كاتب</span></label>
+          <label><input type="radio" name="q1" value="c"> <span data-i18n="page.q1.c">مكتب</span></label>
+        </div>
+        <p class="q-feedback" data-feedback aria-live="polite"></p>
+      </div>
+
+      <div class="q-block" data-qid="q2">
+        <h3 data-i18n="page.q2">What is the first letter of the Arabic alphabet?</h3>
+        <div class="q-options">
+          <label><input type="radio" name="q2" value="a"> <span data-i18n="page.q2.a">ب</span></label>
+          <label><input type="radio" name="q2" value="b"> <span data-i18n="page.q2.b">ا</span></label>
+          <label><input type="radio" name="q2" value="c"> <span data-i18n="page.q2.c">م</span></label>
+        </div>
+        <p class="q-feedback" data-feedback aria-live="polite"></p>
+      </div>
+
+      <button id="check" class="btn" type="button" data-i18n="page.check">Check answers</button>
+    </section>
+
+    <p class="muted">
+      <small>
+        <span data-i18n="page.progress">Progress</span>:
+        <span id="status" aria-live="polite">—</span>
+      </small>
+    </p>
+  </main>
+
+  <div data-include="/arabic/year7/module1/footer.html"></div>
+  <div data-include="/arabic/footer.html"></div>
+
+  <script src="/shared/include.js"></script>
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import { initHeader } from '/shared/ui.js';
+    import { initInstallButton } from '/shared/install.js';
+    import { applyI18n } from '/shared/i18n.js';
+    import { markLesson, getProgress } from '/arabic/assets/js/app.js';
+
+    initHeader();
+    initInstallButton();
+
+    const MODULE = 'year7/module1';
+    const LESSON = 'lesson2';
+    const ANSWERS = { q1: 'a', q2: 'b' };
+
+    const checkBtn = document.getElementById('check');
+    checkBtn.addEventListener('click', async () => {
+      let allCorrect = true;
+
+      for (const [qid, answer] of Object.entries(ANSWERS)) {
+        const block = document.querySelector(`[data-qid="${qid}"]`);
+        const feedback = block.querySelector('[data-feedback]');
+        const chosen = block.querySelector(`input[name="${qid}"]:checked`);
+
+        if (chosen && chosen.value === answer) {
+          feedback.dataset.state = 'ok';
+          feedback.dataset.i18n = 'page.correct';
+          applyI18n(feedback);
+        } else {
+          allCorrect = false;
+          feedback.dataset.state = 'ko';
+          feedback.dataset.i18n = 'page.incorrect';
+          applyI18n(feedback);
+        }
+      }
+
+      if (allCorrect) {
+        await markLesson(MODULE, LESSON, true);
+        await renderStatus();
+      }
+    });
+
+    async function renderStatus() {
+      const p = await getProgress(MODULE);
+      const done = !!(p.lessons && p.lessons[LESSON]);
+      const el = document.getElementById('status');
+      if (!el) return;
+      el.dataset.i18n = done ? 'page.completed' : 'page.notStarted';
+      applyI18n(el);
+      el.style.color = done ? 'var(--brand)' : 'var(--muted)';
+    }
+
+    renderStatus();
+  </script>
+</body>
+</html>
+```
+
+---
+
+## What this demonstrates
+
+| Concept | Where |
+|---|---|
+| App partial → module partial → page → module partial → app partial | Both lesson pages |
+| Module-scoped `styles.css` | Loaded after app `styles.css`, only on module pages |
+| Module-scoped `draw.js` | Lives in module folder, imported only by `lesson1.html` |
+| Complete `window.I18N` per page | Includes every key from all partials on that page + page keys |
+| `data-i18n-attr` for a11y | `aria-label` on module nav + canvas |
+| Dynamic i18n | `#status` flips between `page.completed` / `page.notStarted` via `applyI18n(el)` |
+| Storage via `appData` | `markLesson` / `getProgress` write to `arabic:progress:year7/module1` |
+| RTL-safe "back" arrow | CSS `[dir="rtl"] .mod-back::before` |
+| HiDPI canvas + resize | `draw.js` handles DPR, `ResizeObserver`, pointer capture |
+| No localStorage in page code | Only through `shared/store.js` via `arabic/assets/js/app.js` |
+
+## Note on the repeated `window.I18N` blocks
+
+Per the contract, **each page defines its own `window.I18N`** — that's why `app.*`, `nav.*`, `footer.*`, `mod.*` appear in both lessons. If a module grows to dozens of pages and you want to factor common keys out, the clean pattern is a small classic script the page loads **before** its own `window.I18N`:
+
+```html
+<script src="/arabic/year7/module1/common-i18n.js"></script>
+<script>
+  window.I18N = { ...window.I18N, 'page.title': { … } };
+</script>
+```
+
+`i18n.js` just reads `window.I18N` at runtime, so merging ahead of it is transparent. I did **not** add that file now — it goes against the "complete per page" rule we agreed, and one duplicated set of ~10 keys across 2 pages is fine for the sample. Say the word if you want a `common-i18n.js` convention when the module count grows.
+
+---
+
+# v0.0.7 — message 6 of 6 · final · `philo/` + Supabase doc + `versions.log`
+
+Delivers:
+- `philo/` — minimal parallel set (app + one module `term1/`) mirroring `arabic/`'s structure but in FR/LTR with a **text autosave** demo instead of a canvas (different module-specific JS on purpose, to show the pattern generalizes).
+- `docs/SUPABASE.md` — the full migration runbook: schema SQL, RLS, `config.js` change, and drop-in bodies for `store.js` + `auth.js`.
+- `versions.log` updated to close at `0.0.7`.
+- A short "what's next" at the end.
+
+---
+
+## `philo/header.html`
+
+```html
+<header>
+  <strong data-i18n="app.title">Philo Edu</strong>
+  <div class="hdr-actions">
+    <button id="theme-btn" type="button"
+            aria-label="Toggle theme"
+            data-i18n-attr="aria-label:nav.theme">☾</button>
+    <select id="lang-sel" aria-label="Language"
+            data-i18n-attr="aria-label:nav.lang">
+      <option value="fr">Français</option>
+      <option value="en">English</option>
+      <option value="ar">العربية</option>
+    </select>
+    <button id="install-btn" type="button" hidden
+            data-i18n="nav.install">Installer</button>
+    <button id="user-chip" type="button"
+            data-i18n="nav.signin">Connexion</button>
+  </div>
+</header>
+```
+
+---
+
+## `philo/footer.html`
+
+```html
+<footer>
+  <small>
+    <span data-i18n="footer.copy">Philo Edu</span>
+    · <span data-i18n="footer.rights">Tous droits réservés</span>
+  </small>
+</footer>
+```
+
+---
+
+## `philo/manifest.webmanifest`
+
+```json
+{
+  "id": "/philo/",
+  "name": "Philo Edu Dashboard",
+  "short_name": "Philo Edu",
+  "description": "Philosophy education dashboard",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "/philo/",
+  "scope": "/philo/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#6b4dab",
+  "background_color": "#f6f7f9",
+  "categories": ["education"],
+  "icons": [
+    { "src": "/philo/assets/icons/icon-96x96.png",   "sizes": "96x96",   "type": "image/png", "purpose": "any" },
+    { "src": "/philo/assets/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "/philo/assets/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/philo/assets/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Leçon 1",
+      "short_name": "L1",
+      "url": "/philo/term1/lesson1.html",
+      "icons": [{ "src": "/philo/assets/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [
+    { "src": "/philo/assets/screenshots/home.png",   "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow" },
+    { "src": "/philo/assets/screenshots/lesson.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide" }
+  ]
+}
+```
+
+> Same note as arabic: the `screenshots` array is optional. Delete it if you don't want to produce those PNGs yet.
+
+---
+
+## `philo/index.html`
+
+```html
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Philo Edu Dashboard</title>
+  <meta name="theme-color" content="#6b4dab">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Philo Edu">
+  <link rel="manifest" href="/philo/manifest.webmanifest">
+  <link rel="icon" href="/philo/assets/icons/icon-96x96.png" sizes="96x96" type="image/png">
+  <link rel="apple-touch-icon" href="/philo/assets/icons/icon-192x192.png">
+  <link rel="stylesheet" href="/philo/assets/css/styles.css">
+
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"fr"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+
+  <script>
+    window.I18N = {
+      // app / header partial
+      'app.title':    { en: 'Philo Edu',    fr: 'Philo Édu',            ar: 'تعليم الفلسفة' },
+      'nav.signin':   { en: 'Sign in',      fr: 'Connexion',            ar: 'تسجيل الدخول' },
+      'nav.install':  { en: 'Install',      fr: 'Installer',            ar: 'تثبيت' },
+      'nav.addHome':  { en: 'Add to Home',  fr: 'Ajouter à l\u2019accueil', ar: 'أضف للشاشة' },
+      'nav.lang':     { en: 'Language',     fr: 'Langue',               ar: 'اللغة' },
+      'nav.theme':    { en: 'Toggle theme', fr: 'Changer de thème',     ar: 'تبديل المظهر' },
+      // footer partial
+      'footer.copy':   { en: 'Philo Edu',         fr: 'Philo Édu',            ar: 'تعليم الفلسفة' },
+      'footer.rights': { en: 'All rights reserved', fr: 'Tous droits réservés', ar: 'كل الحقوق محفوظة' },
+      // page
+      'page.welcome':    { en: 'Welcome',       fr: 'Bienvenue',          ar: 'مرحباً' },
+      'page.subtitle':   { en: 'Pick a module to start',
+                            fr: 'Choisissez un module pour commencer',
+                            ar: 'اختر وحدة للبدء' },
+      'page.modules':    { en: 'Modules',       fr: 'Modules',            ar: 'الوحدات' },
+      'page.term1':      { en: 'Term 1 · Introduction to Philosophy',
+                            fr: 'Terme 1 · Introduction à la philosophie',
+                            ar: 'الفصل 1 · مقدمة في الفلسفة' },
+      'page.lesson1':    { en: 'Lesson 1 — What is philosophy?',
+                            fr: 'Leçon 1 — Qu\u2019est-ce que la philosophie ?',
+                            ar: 'الدرس 1 — ما هي الفلسفة؟' },
+      'page.otherApps':  { en: 'Other apps',    fr: 'Autres apps',       ar: 'تطبيقات أخرى' },
+      'page.arabic':     { en: 'Arabic Edu ↗',  fr: 'Éduc. Arabe ↗',     ar: 'تعليم العربية ↗' },
+      'page.visits':     { en: 'Visits on this device',
+                            fr: 'Visites sur cet appareil',
+                            ar: 'الزيارات على هذا الجهاز' }
+    };
+  </script>
+</head>
+<body>
+  <div data-include="/philo/header.html"></div>
+
+  <main>
+    <h1 data-i18n="page.welcome">Bienvenue</h1>
+    <p  data-i18n="page.subtitle">Choisissez un module pour commencer</p>
+
+    <h2 data-i18n="page.modules">Modules</h2>
+    <section class="module-list">
+      <a class="module-card" href="/philo/term1/lesson1.html">
+        <strong data-i18n="page.term1">Term 1 · Introduction to Philosophy</strong>
+        <small  data-i18n="page.lesson1">Lesson 1 — What is philosophy?</small>
+      </a>
+    </section>
+
+    <h2 data-i18n="page.otherApps">Autres apps</h2>
+    <p>
+      <a data-app-link="arabic"
+         href="/arabic/"
+         target="_blank" rel="noopener noreferrer"
+         data-i18n="page.arabic">Arabic Edu ↗</a>
+    </p>
+
+    <p class="muted">
+      <small>
+        <span data-i18n="page.visits">Visits on this device</span>:
+        <span id="visits">–</span>
+      </small>
+    </p>
+  </main>
+
+  <div data-include="/philo/footer.html"></div>
+
+  <script src="/shared/include.js"></script>
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import { initHeader, externalAppLink } from '/shared/ui.js';
+    import { initInstallButton } from '/shared/install.js';
+    import '/shared/i18n.js';
+    import { trackVisit } from '/philo/assets/js/app.js';
+
+    initHeader();
+    initInstallButton();
+    externalAppLink('arabic');
+
+    trackVisit().then((n) => {
+      const el = document.getElementById('visits');
+      if (el) el.textContent = String(n);
+    }).catch(() => {});
+  </script>
+</body>
+</html>
+```
+
+---
+
+## `philo/assets/css/styles.css`
+
+Identical to `arabic/assets/css/styles.css` except the brand color. Full file for clarity:
+
+```css
+/* philo — app-level styles. Module-level styles live in the module folder. */
+
+:root {
+  --brand: #6b4dab;
+  --bg:    #f6f7f9;
+  --fg:    #1b1f24;
+  --card:  #ffffff;
+  --line:  #e3e6ea;
+  --muted: #667;
+}
+html[data-mode="dark"] {
+  --bg:    #0f1216;
+  --fg:    #e9edf2;
+  --card:  #171c22;
+  --line:  #242b33;
+  --muted: #8a95a1;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  transition: background .15s, color .15s;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  background: var(--brand);
+  color: #fff;
+  padding: 1rem 1.25rem;
+  padding-top: calc(1rem + env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+header strong { font-size: 1.05rem; }
+
+.hdr-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.hdr-actions button,
+.hdr-actions select {
+  background: rgba(255, 255, 255, .15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .25);
+  padding: .4rem .7rem;
+  border-radius: 8px;
+  font-size: .9rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.hdr-actions button:hover,
+.hdr-actions select:hover { background: rgba(255, 255, 255, .25); }
+.hdr-actions [data-signedin="1"] { background: rgba(255, 255, 255, .35); }
+.hdr-actions [hidden] { display: none !important; }
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.25rem;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+}
+
+h1 { margin: 0 0 .25rem; }
+h2 { margin: 1.75rem 0 .75rem; font-size: 1.1rem; }
+
+a { color: var(--brand); }
+html[data-mode="dark"] a { color: #b39ae0; }
+
+.muted { color: var(--muted); }
+
+.module-list { display: grid; gap: .65rem; }
+.module-card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: .9rem 1rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .15s;
+}
+.module-card:hover { border-color: var(--brand); }
+.module-card strong { display: block; }
+.module-card small  { color: var(--muted); }
+
+.btn {
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: .55rem .9rem;
+  font-size: .95rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn[disabled] { opacity: .55; cursor: not-allowed; }
+
+footer {
+  padding: 1rem 1.25rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  text-align: center;
+  font-size: .85rem;
+}
+```
+
+---
+
+## `philo/assets/js/app.js`
+
+```js
+// philo/assets/js/app.js — app entry helpers.
+// Storage goes only through shared/store.js. Never touch localStorage directly.
+
+import { appData } from '/shared/store.js';
+
+const APP = 'philo';
+
+/** Increment and return the per-device visit counter for this app. */
+export async function trackVisit() {
+  const n = ((await appData.get(APP, 'visits', 0)) || 0) + 1;
+  await appData.set(APP, 'visits', n);
+  return n;
+}
+
+/** Read progress object for a module (e.g. 'term1'). */
+export async function getProgress(moduleId) {
+  return (await appData.get(APP, `progress:${moduleId}`, {})) || {};
+}
+
+/** Merge a patch into the module's progress object and persist. */
+export async function setProgress(moduleId, patch) {
+  const cur  = await getProgress(moduleId);
+  const next = { ...cur, ...patch };
+  await appData.set(APP, `progress:${moduleId}`, next);
+  return next;
+}
+
+/** Mark a lesson complete for a module. */
+export async function markLesson(moduleId, lessonId, done = true) {
+  const cur = await getProgress(moduleId);
+  const lessons = { ...(cur.lessons || {}), [lessonId]: !!done };
+  return setProgress(moduleId, { lessons });
+}
+
+/** Draft text (persisted per lesson). */
+export async function getDraft(moduleId, lessonId) {
+  return (await appData.get(APP, `draft:${moduleId}:${lessonId}`, '')) || '';
+}
+export async function setDraft(moduleId, lessonId, text) {
+  return appData.set(APP, `draft:${moduleId}:${lessonId}`, text || '');
+}
+```
+
+---
+
+## `philo/term1/header.html`
+
+```html
+<nav class="mod-hdr" aria-label="Module navigation"
+     data-i18n-attr="aria-label:mod.nav">
+  <a class="mod-back" href="/philo/">
+    <span data-i18n="mod.back">Retour à Philo Édu</span>
+  </a>
+  <span class="mod-title" data-i18n="mod.title">Terme 1 · Introduction à la philosophie</span>
+</nav>
+```
+
+---
+
+## `philo/term1/footer.html`
+
+```html
+<footer class="mod-ftr">
+  <small>
+    <span data-i18n="mod.copy">Terme 1 · Introduction à la philosophie</span>
+    ·
+    <a href="/philo/term1/lesson1.html" data-i18n="mod.lesson1">Leçon 1</a>
+  </small>
+</footer>
+```
+
+---
+
+## `philo/term1/styles.css`
+
+```css
+/* term1 — scoped styles. Loaded only on pages in this module. */
+
+.mod-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .75rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+  font-size: .95rem;
+}
+.mod-back {
+  color: var(--brand);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+html[data-mode="dark"] .mod-back { color: #b39ae0; }
+
+.mod-back::before { content: "← "; }
+[dir="rtl"] .mod-back::before { content: "→ "; }
+
+.mod-title { font-weight: 600; }
+
+.mod-ftr {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  text-align: center;
+  font-size: .85rem;
+}
+.mod-ftr a { color: var(--brand); text-decoration: none; }
+.mod-ftr a:hover { text-decoration: underline; }
+html[data-mode="dark"] .mod-ftr a { color: #b39ae0; }
+
+/* ── reflection exercise ─────────────────────────────────── */
+.prompt {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  margin: 1rem 0;
+}
+.prompt p { margin: 0; }
+.prompt em { color: var(--muted); }
+
+textarea.reflect {
+  display: block;
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  padding: .8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--fg);
+  font: inherit;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+textarea.reflect:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(107, 77, 171, .18);
+}
+
+.save-state {
+  margin: .5rem 0 1rem;
+  font-size: .85rem;
+  color: var(--muted);
+  min-height: 1.2em;
+  transition: color .2s;
+}
+.save-state[data-state="saving"] { color: var(--muted); }
+.save-state[data-state="saved"]  { color: #6b4dab; }
+html[data-mode="dark"] .save-state[data-state="saved"] { color: #b39ae0; }
+```
+
+---
+
+## `philo/term1/writing.js`
+
+```js
+// philo/term1/writing.js — text autosave helper, scoped to the module.
+// Different shape from arabic's draw.js on purpose: it shows the pattern
+// generalizes — module-specific JS can be anything the module needs.
+
+/**
+ * Autosave textarea content after a short idle period.
+ * @param {HTMLTextAreaElement} textarea
+ * @param {{
+ *   delay?: number,
+ *   onSave: (value: string) => Promise<void>,
+ *   onState?: (state: 'idle'|'saving'|'saved') => void
+ * }} opts
+ * @returns {() => void}  teardown
+ */
+export function attachAutosave(textarea, { delay = 600, onSave, onState } = {}) {
+  if (!textarea || typeof onSave !== 'function') return () => {};
+
+  let timer = null;
+  let lastSaved = textarea.value;
+  let saving = false;
+  let pending = false;
+
+  function setState(s) { if (onState) onState(s); }
+
+  async function flush() {
+    if (saving) { pending = true; return; }
+    const value = textarea.value;
+    if (value === lastSaved) { setState('idle'); return; }
+    saving = true;
+    setState('saving');
+    try {
+      await onSave(value);
+      lastSaved = value;
+      setState('saved');
+    } catch (err) {
+      console.error('[autosave]', err);
+      setState('idle');
+    } finally {
+      saving = false;
+      if (pending) { pending = false; await flush(); }
+    }
+  }
+
+  function scheduleSave() {
+    clearTimeout(timer);
+    timer = setTimeout(flush, delay);
+  }
+
+  textarea.addEventListener('input', scheduleSave);
+
+  // Save on navigate away (visibility change catches mobile tab switch too)
+  function flushOnHide() {
+    if (document.visibilityState === 'hidden') flush();
+  }
+  document.addEventListener('visibilitychange', flushOnHide);
+
+  return function destroy() {
+    clearTimeout(timer);
+    textarea.removeEventListener('input', scheduleSave);
+    document.removeEventListener('visibilitychange', flushOnHide);
+  };
+}
+```
+
+---
+
+## `philo/term1/lesson1.html`
+
+```html
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Leçon 1 — Qu'est-ce que la philosophie ? · Philo Edu</title>
+  <meta name="theme-color" content="#6b4dab">
+  <link rel="icon" href="/philo/assets/icons/icon-96x96.png" sizes="96x96" type="image/png">
+  <link rel="apple-touch-icon" href="/philo/assets/icons/icon-192x192.png">
+  <link rel="stylesheet" href="/philo/assets/css/styles.css">
+  <link rel="stylesheet" href="/philo/term1/styles.css">
+
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"fr"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+
+  <script>
+    window.I18N = {
+      // app header partial
+      'app.title':    { en: 'Philo Edu',    fr: 'Philo Édu',            ar: 'تعليم الفلسفة' },
+      'nav.signin':   { en: 'Sign in',      fr: 'Connexion',            ar: 'تسجيل الدخول' },
+      'nav.install':  { en: 'Install',      fr: 'Installer',            ar: 'تثبيت' },
+      'nav.addHome':  { en: 'Add to Home',  fr: 'Ajouter à l\u2019accueil', ar: 'أضف للشاشة' },
+      'nav.lang':     { en: 'Language',     fr: 'Langue',               ar: 'اللغة' },
+      'nav.theme':    { en: 'Toggle theme', fr: 'Changer de thème',     ar: 'تبديل المظهر' },
+      // app footer partial
+      'footer.copy':   { en: 'Philo Edu',         fr: 'Philo Édu',            ar: 'تعليم الفلسفة' },
+      'footer.rights': { en: 'All rights reserved', fr: 'Tous droits réservés', ar: 'كل الحقوق محفوظة' },
+      // module header partial
+      'mod.nav':     { en: 'Module navigation', fr: 'Navigation du module',
+                       ar: 'تنقل الوحدة' },
+      'mod.back':    { en: 'Back to Philo Edu', fr: 'Retour à Philo Édu',
+                       ar: 'العودة إلى تعليم الفلسفة' },
+      'mod.title':   { en: 'Term 1 · Introduction to Philosophy',
+                       fr: 'Terme 1 · Introduction à la philosophie',
+                       ar: 'الفصل 1 · مقدمة في الفلسفة' },
+      // module footer partial
+      'mod.copy':    { en: 'Term 1 · Introduction to Philosophy',
+                       fr: 'Terme 1 · Introduction à la philosophie',
+                       ar: 'الفصل 1 · مقدمة في الفلسفة' },
+      'mod.lesson1': { en: 'Lesson 1', fr: 'Leçon 1', ar: 'الدرس 1' },
+      // page
+      'page.title':      { en: 'Lesson 1 — What is philosophy?',
+                            fr: 'Leçon 1 — Qu\u2019est-ce que la philosophie ?',
+                            ar: 'الدرس 1 — ما هي الفلسفة؟' },
+      'page.prompt':     { en: 'Socrates said the unexamined life is not worth living. In your own words, what does that mean?',
+                            fr: 'Socrate disait que la vie sans examen ne vaut pas la peine d\u2019être vécue. Qu\u2019est-ce que cela signifie, selon vous ?',
+                            ar: 'قال سقراط إن الحياة غير المفحوصة لا تستحق أن تُعاش. ماذا يعني ذلك بكلماتك؟' },
+      'page.placeholder':{ en: 'Write your reflection here…',
+                            fr: 'Écrivez votre réflexion ici…',
+                            ar: 'اكتب تأملك هنا…' },
+      'page.saving':     { en: 'Saving…',  fr: 'Enregistrement…', ar: 'جارٍ الحفظ…' },
+      'page.saved':      { en: 'Saved',    fr: 'Enregistré',       ar: 'تم الحفظ' },
+      'page.markComplete': { en: 'Mark complete',  fr: 'Marquer comme fait',
+                              ar: 'تحديد كمكتمل' },
+      'page.progress':     { en: 'Progress',       fr: 'Progression',         ar: 'التقدم' },
+      'page.completed':    { en: 'Completed',      fr: 'Terminé',             ar: 'مكتمل' },
+      'page.notStarted':   { en: 'Not started',    fr: 'Pas commencé',        ar: 'لم يبدأ' }
+    };
+  </script>
+</head>
+<body>
+  <div data-include="/philo/header.html"></div>
+  <div data-include="/philo/term1/header.html"></div>
+
+  <main>
+    <h1 data-i18n="page.title">Leçon 1 — Qu'est-ce que la philosophie ?</h1>
+
+    <div class="prompt">
+      <p data-i18n="page.prompt">Socrate disait que la vie sans examen ne vaut pas la peine d'être vécue. Qu'est-ce que cela signifie, selon vous ?</p>
+    </div>
+
+    <textarea id="reflect" class="reflect"
+              data-i18n-attr="placeholder:page.placeholder"
+              placeholder="Écrivez votre réflexion ici…"></textarea>
+
+    <p id="save-state" class="save-state" aria-live="polite"></p>
+
+    <div class="btn-row">
+      <button id="complete" class="btn" type="button" data-i18n="page.markComplete">Marquer comme fait</button>
+    </div>
+
+    <p class="muted">
+      <small>
+        <span data-i18n="page.progress">Progression</span>:
+        <span id="status" aria-live="polite">—</span>
+      </small>
+    </p>
+  </main>
+
+  <div data-include="/philo/term1/footer.html"></div>
+  <div data-include="/philo/footer.html"></div>
+
+  <script src="/shared/include.js"></script>
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import { initHeader } from '/shared/ui.js';
+    import { initInstallButton } from '/shared/install.js';
+    import { applyI18n } from '/shared/i18n.js';
+    import { attachAutosave } from '/philo/term1/writing.js';
+    import { getDraft, setDraft, markLesson, getProgress } from '/philo/assets/js/app.js';
+
+    initHeader();
+    initInstallButton();
+
+    const MODULE = 'term1';
+    const LESSON = 'lesson1';
+
+    const ta  = document.getElementById('reflect');
+    const out = document.getElementById('save-state');
+
+    // Load saved draft BEFORE attaching autosave so `lastSaved` starts correct.
+    (async () => {
+      const draft = await getDraft(MODULE, LESSON);
+      if (draft) ta.value = draft;
+      attachAutosave(ta, {
+        delay: 600,
+        onSave: (value) => setDraft(MODULE, LESSON, value),
+        onState: (s) => {
+          if (s === 'saving')      { out.dataset.state = 'saving'; out.dataset.i18n = 'page.saving'; }
+          else if (s === 'saved')  { out.dataset.state = 'saved';  out.dataset.i18n = 'page.saved';  }
+          else                     { out.dataset.state = '';       out.dataset.i18n = '';            }
+          applyI18n(out);
+        }
+      });
+    })();
+
+    document.getElementById('complete').addEventListener('click', async () => {
+      // Flush a final save so "mark complete" never leaves the textarea unsaved.
+      await setDraft(MODULE, LESSON, ta.value);
+      await markLesson(MODULE, LESSON, true);
+      await renderStatus();
+    });
+
+    async function renderStatus() {
+      const p = await getProgress(MODULE);
+      const done = !!(p.lessons && p.lessons[LESSON]);
+      const el = document.getElementById('status');
+      if (!el) return;
+      el.dataset.i18n = done ? 'page.completed' : 'page.notStarted';
+      applyI18n(el);
+      el.style.color = done ? 'var(--brand)' : 'var(--muted)';
+    }
+
+    renderStatus();
+  </script>
+</body>
+</html>
+```
+
+---
+
+## `docs/SUPABASE.md`
+
+```md
+# Supabase migration — flipping `backend: 'supabase'`
+
+## Why bother
+
+`localStorage` on a shared origin:
+
+- Is wiped for **all** apps when the user uninstalls **any** one of them.
+- Has no per-user isolation.
+- Cannot safely hold credentials.
+
+Supabase fixes the first two. It also gives you real auth (email/password,
+magic link, OAuth) without any server code.
+
+## What actually changes
+
+Three source files and one SQL script. **No changes to `arabic/` or `philo/`.**
+
+| File | Change |
+|---|---|
+| `shared/config.js` | flip `backend: 'supabase'`, fill `supabaseUrl`, `supabaseAnonKey` |
+| `shared/store.js`  | replace the `supabase` stub with the body below |
+| `shared/auth.js`   | replace the `supabaseAuth` stub with the body below |
+| `sw.js`            | bump `VERSION` (optional but recommended — data shape changed) |
+| Supabase project   | run the SQL below |
+
+The facade in `store.js` / `auth.js` exposes the **same public API** as the
+local backend, so app pages (`arabic/`, `philo/`) keep working unmodified.
+
+---
+
+## 1. Create the Supabase project
+
+1. supabase.com → New project (free tier is enough).
+2. Once ready: Project Settings → API → copy **Project URL** and **anon public key**.
+3. Save them for step 3 below.
+
+> The `anon` key is *public* by design. Row Level Security (RLS) is what
+> actually protects data — see the policies in step 2.
+
+---
+
+## 2. Schema + RLS — paste into Supabase SQL Editor and run
+
+```sql
+-- One row per user: shared prefs live here.
+create table profiles (
+  id         uuid primary key references auth.users(id) on delete cascade,
+  name       text,
+  avatar_url text,
+  prefs      jsonb not null default '{}'::jsonb,   -- { mode, lang }
+  updated_at timestamptz not null default now()
+);
+
+-- Per-app key/value. The composite PK is what isolates apps.
+create table app_data (
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  app_id     text not null,
+  key        text not null,
+  value      jsonb,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, app_id, key)
+);
+
+create index app_data_user_app_idx on app_data(user_id, app_id);
+
+alter table profiles  enable row level security;
+alter table app_data  enable row level security;
+
+create policy "profiles: own row" on profiles
+  for all
+  using  (auth.uid() = id)
+  with check (auth.uid() = id);
+
+create policy "app_data: own rows" on app_data
+  for all
+  using  (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+```
+
+**Why this is enough:**
+
+- Every read/write from the client carries the user's JWT. Postgres checks
+  `auth.uid()` against the row's `id` / `user_id`. Cross-user leaks are
+  impossible without a stolen JWT.
+- `app_id` is client-supplied but constrained by the RLS policy to the
+  authenticated user's own rows — one user can't see another user's data.
+- **Uninstalling** the Arabic PWA does **not** affect `app_data` rows for
+  Philo, because those are rows on the server, keyed by `(user_id, app_id)`.
+
+---
+
+## 3. `shared/config.js` — flip the switch
+
+```js
+export const CONFIG = {
+  backend: 'supabase',
+  supabaseUrl:     'https://YOUR-PROJECT.supabase.co',
+  supabaseAnonKey: 'eyJhbGciOi...',     // anon public key from step 1
+  defaultLang: 'en',
+  apps: {
+    arabic: { name: 'Arabic Edu', url: '/arabic/' },
+    philo:  { name: 'Philo Edu',  url: '/philo/'  }
+  }
+};
+```
+
+---
+
+## 4. `shared/store.js` — replace the `supabase` stub
+
+Replace the whole `const supabase = { … }` object with:
+
+```js
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const sb = createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey, {
+  auth: { persistSession: true, autoRefreshToken: true }
+});
+export { sb };   // auth.js imports it below
+
+const supabase = {
+  async pushPrefs() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+    const prefs = {
+      mode: mirror.read(PREF_KEYS.mode, null),
+      lang: mirror.read(PREF_KEYS.lang, null)
+    };
+    await sb.from('profiles').upsert({
+      id: user.id, prefs, updated_at: new Date().toISOString()
+    });
+  },
+
+  async pullPrefs() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return null;
+    const { data } = await sb.from('profiles')
+      .select('prefs, name, avatar_url').eq('id', user.id).maybeSingle();
+    if (!data) return null;
+    return {
+      mode: data.prefs?.mode,
+      lang: data.prefs?.lang,
+      profile: data.name ? { name: data.name, avatar: data.avatar_url } : null
+    };
+  },
+
+  async getApp(appId, key) {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return null;
+    const { data } = await sb.from('app_data')
+      .select('value').eq('user_id', user.id)
+      .eq('app_id', appId).eq('key', key).maybeSingle();
+    return data?.value ?? null;
+  },
+
+  async setApp(appId, key, val) {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+    await sb.from('app_data').upsert({
+      user_id: user.id, app_id: appId, key, value: val,
+      updated_at: new Date().toISOString()
+    });
+  },
+
+  async removeApp(appId, key) {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+    await sb.from('app_data').delete()
+      .eq('user_id', user.id).eq('app_id', appId).eq('key', key);
+  },
+
+  async clearApp(appId) {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+    await sb.from('app_data').delete()
+      .eq('user_id', user.id).eq('app_id', appId);
+  },
+
+  async setProfile(p) {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+    await sb.from('profiles').upsert({
+      id: user.id,
+      name: p?.name ?? null,
+      avatar_url: p?.avatar ?? null
+    });
+  }
+};
+```
+
+> **Offline note:** writes still land in the local mirror first
+> (`mirror.write(...)` inside `appData.set`), then `await backend.setApp(...)`.
+> If the network is down, the Supabase call rejects — `appData.set` currently
+> `await`s it, so the caller sees the error. Two options:
+> (a) leave as-is (UI blocks / retries when back online), or
+> (b) wrap backend calls in try/catch + enqueue to an outbox. For v1,
+> the simplest correct choice is to catch in `appData` and log:
+>
+> ```js
+> async set(appId, key, val) {
+>   mirror.write(`${appId}:${key}`, val);
+>   try { await backend.setApp(appId, key, val); }
+>   catch (e) { console.warn('[appData.set] offline:', e); }
+> }
+> ```
+
+---
+
+## 5. `shared/auth.js` — replace the `supabaseAuth` stub
+
+```js
+import { sb } from './store.js';       // reuses the same Supabase client
+import { prefs } from './store.js';
+
+const supabaseAuth = {
+  async signIn(email, password) {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    await prefs.sync();                     // pull shared prefs from server
+    notify();
+    return data.user;
+  },
+
+  async signUp(email, password, name) {
+    const { data, error } = await sb.auth.signUp({
+      email, password,
+      options: { data: { name } }
+    });
+    if (error) throw error;
+    if (data.user) {
+      await sb.from('profiles').upsert({
+        id: data.user.id, name: name || email.split('@')[0]
+      });
+    }
+    notify();
+    return data.user;
+  },
+
+  async signOut() {
+    await sb.auth.signOut();
+    localStorage.removeItem(SESSION_KEY);
+    await prefs.setProfile(null);
+    notify();
+  },
+
+  getUser() {
+    try { return JSON.parse(localStorage.getItem(SESSION_KEY)); }
+    catch { return null; }
+  }
+};
+
+// Mirror Supabase session into our local mirror for the sync chip.
+// (Supabase SDK itself stores the session; we only copy the display bits.)
+sb.auth.onAuthStateChange((_evt, session) => {
+  if (session?.user) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      id:    session.user.id,
+      email: session.user.email,
+      name:  session.user.user_metadata?.name
+    }));
+  } else {
+    localStorage.removeItem(SESSION_KEY);
+  }
+  notify();
+});
+```
+
+> ⚠️ `notify()` in `auth.js` already exists (it fires `onChange` listeners).
+> Keep it as-is. The chip in `shared/ui.js` reacts automatically.
+>
+> **First sign-in after switching backends:** the user has local data from
+> `local` mode; the server has none. Either (a) clear local data on first
+> Supabase sign-in (`prefs.sync()` returning `null` means server empty), or
+> (b) accept that the local mirror is empty until they re-enter settings.
+> Option (a) is cleaner; add to `auth.signIn`:
+>
+> ```js
+> const remote = await backend.pullPrefs();
+> if (!remote) {
+>   // seed the server from whatever is still in local mirror
+>   await backend.pushPrefs();
+>   await backend.setProfile(prefs.get().profile);
+> }
+> ```
+
+---
+
+## 6. Bump `sw.js`
+
+In `sw.js`, `const VERSION = 'v3';` → `'v4'`. Content SHA changes, but data
+shape changed too; a cache purge is safest.
+
+```diff
+-const VERSION = 'v3';
++const VERSION = 'v4';
+```
+
+---
+
+## 7. Test checklist
+
+1. `npx serve .` → open `/arabic/` → Sign in (real Supabase account).
+2. Write a draft on `/philo/term1/lesson1.html` → refresh → draft present.
+3. Open Supabase → Table Editor → `app_data` → see `arabic:*` and `philo:*` rows.
+4. **Uninstall `Arabic Edu`** from the browser (with "clear data").
+5. Reinstall `Philo Edu` → sign in → **draft still there**. ✅
+6. Install `Arabic Edu` again → sign in → its data still in Supabase. ✅
+
+---
+
+## 8. Rollback
+
+Flip `CONFIG.backend` back to `'local'`. The app uses `localStorage` again.
+Remote data is untouched. **There is no automatic merge** back into local
+storage — if you roll back and want to keep data, export from Supabase
+first (`Table Editor → app_data → Download CSV`).
+
+---
+
+## 9. What this does *not* solve
+
+- **Offline writes**: Supabase is HTTP. Writes fail offline. Add an outbox
+  (IndexedDB + Background Sync) later if that matters. Reads still work from
+  the local mirror, so the UI stays populated.
+- **Passwords in `localStorage`**: never happened. Supabase SDK stores the
+  *session* (JWT + refresh token) in `localStorage`, which is standard and
+  reasonable — it's not a password, and Supabase rotates it.
+- **Cross-tab sign-in**: works out of the box via `onAuthStateChange`. The
+  local mirror's `storage` event listener also fires `notify()` if another
+  tab writes it, so the chip updates in every tab.
+```
+
+---
+
+## Updated `versions.log`
+
+```log
+# edu-dash — version history
+# One version = one message in the conversation, starting at 0.0.1.
+
+0.0.1  Feasibility check
+  Q: can multiple PWAs live on one origin?
+  A: yes — each needs its own manifest with distinct `id` + `start_url` + `scope`.
+  Files: none.
+
+0.0.2  File inventory question
+  Q: what are the essential files? can they be produced?
+  A: clarifying round — asked framework / app list / offline strategy / icon format.
+  Files: none.
+
+0.0.3  v0 draft — first full file drop
+  Inputs: plain static, apps {arabic, philo}, network-first, real PNG icons.
+  Files: netlify.toml · index.html · offline.html · register-sw.js
+         sw.js (per-app variant) · arabic/ + philo/ starters
+         README.md · tools/add-app.mjs
+
+0.0.4  Architecture Q&A + patch plan
+  Q: shared storage? PWA feature matrix? cross-app nav? install button?
+  A: edu:* shared namespace · feature capability table · target="_blank"
+     cross-app rule · per-app install prompt.
+  Files: revised plan only.
+
+0.0.5  Shared SW + shared modules + Supabase facade
+  Architecture change: single root `/sw.js` (scope "/") reading /apps.json.
+  Files: shared/{config,store,auth,install,ui}.js · sw.js v2
+         updated arabic/ + philo/ index.html + styles.css
+         launcher with cross-app target=_blank
+         manifests gain `shortcuts` + `screenshots`
+         Supabase schema + wiring (stubbed, backend='local').
+
+0.0.6  Modules, partials, page i18n (6 sub-messages)
+  New requirements:
+    • versions.log tracks progression.
+    • Each app AND each module may ship its own header.html / footer.html.
+    • Each module may add its own styles.css / *.js.
+    • Every HTML page declares window.I18N and uses data-i18n attributes.
+  Delivered (6 sub-messages):
+    msg 1: plan + versions.log
+    msg 2: shared/{config,store,auth,i18n,include,ui,install}.js
+           + register-sw.js + shared/debug.html
+    msg 3: netlify.toml · apps.json · index.html · offline.html
+           · sw.js v3 · README.md · tools/add-app.mjs
+    msg 4: arabic/{index.html, manifest.webmanifest, header.html,
+           footer.html, assets/css/styles.css, assets/js/app.js}
+    msg 5: arabic/year7/module1/{header.html, footer.html, styles.css,
+           draw.js, lesson1.html, lesson2.html}
+    msg 6: philo/{index.html, manifest.webmanifest, header.html,
+           footer.html, assets/css/styles.css, assets/js/app.js}
+           philo/term1/{header.html, footer.html, styles.css,
+           writing.js, lesson1.html}
+           docs/SUPABASE.md
+           versions.log (this file)
+  Status: complete for backend='local'. Supabase is a 3-file flip.
+
+0.0.7  — current — handoff
+  State: repo is complete, deployable to GitHub → Netlify with
+         CONFIG.backend = 'local'.
+  Supabase migration documented end-to-end in docs/SUPABASE.md.
+  No source changes needed in arabic/ or philo/ to switch backends.
+
+Next version ideas (optional, not started):
+  • add a third app via `node tools/add-app.mjs math …` (dry-run of scaffold)
+  • optional `common-i18n.js` per module when page count grows
+  • offline-write outbox for Supabase mode
+  • maskable icon variants per app
+```
+
+---
+
+## Final recap — full delivered tree
+
+```
+repo/
+├── versions.log
+├── netlify.toml
+├── apps.json
+├── index.html
+├── offline.html
+├── register-sw.js
+├── sw.js                     v3
+├── README.md
+├── docs/
+│   └── SUPABASE.md
+├── tools/
+│   └── add-app.mjs
+├── shared/
+│   ├── config.js
+│   ├── store.js
+│   ├── auth.js
+│   ├── install.js
+│   ├── ui.js
+│   ├── i18n.js
+│   ├── include.js
+│   └── debug.html
+├── arabic/
+│   ├── index.html
+│   ├── manifest.webmanifest
+│   ├── header.html
+│   ├── footer.html
+│   ├── assets/
+│   │   ├── css/styles.css
+│   │   ├── js/app.js
+│   │   └── icons/{96,144,192,512}.png   ← you drop these
+│   ├── assets/screenshots/{home,lesson}.png   ← optional
+│   └── year7/module1/
+│       ├── header.html
+│       ├── footer.html
+│       ├── styles.css
+│       ├── draw.js
+│       ├── lesson1.html
+│       └── lesson2.html
+└── philo/
+    ├── index.html
+    ├── manifest.webmanifest
+    ├── header.html
+    ├── footer.html
+    ├── assets/
+    │   ├── css/styles.css
+    │   ├── js/app.js
+    │   └── icons/{96,144,192,512}.png   ← you drop these
+    ├── assets/screenshots/{home,lesson}.png   ← optional
+    └── term1/
+        ├── header.html
+        ├── footer.html
+        ├── styles.css
+        ├── writing.js
+        └── lesson1.html
+```
+
+## To ship it
+
+1. Copy all files into your repo (GitHub).
+2. Drop the 4 PNG icons in each `assets/icons/`. Optionally add the 2 screenshots per app, or delete the `screenshots` array from the manifests.
+3. Push → Netlify → Import → Deploy (build command empty, publish `.`).
+4. Open `https://<site>.netlify.app/` and click through both apps.
+5. When you're ready for Supabase: follow `docs/SUPABASE.md` — three files, one SQL run.
+
+## Optional next moves (say which, if any)
+
+- Generate a third sample app (`math`) so you can see what `tools/add-app.mjs` emits without running it.
+- Add a `common-i18n.js` convention per module (only worth it if a module grows past ~5 pages).
+- Add an offline-write outbox for Supabase mode.
+- Produce SVG→PNG maskable icon variants and wire them into both manifests.
+
+**Repo is complete.** Nothing pending on my side unless you want one of the above.

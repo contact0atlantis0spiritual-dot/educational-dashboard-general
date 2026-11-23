@@ -1,0 +1,70 @@
+/* term1 — scoped styles. Loaded only on pages in this module. */
+.mod-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .75rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+  font-size: .95rem;
+}
+.mod-back {
+  color: var(--brand);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+html[data-mode="dark"] .mod-back { color: #b39ae0; }
+.mod-back::before { content: "← "; }
+[dir="rtl"] .mod-back::before { content: "→ "; }
+.mod-title { font-weight: 600; }
+.mod-ftr {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  text-align: center;
+  font-size: .85rem;
+}
+.mod-ftr a { color: var(--brand); text-decoration: none; }
+.mod-ftr a:hover { text-decoration: underline; }
+html[data-mode="dark"] .mod-ftr a { color: #b39ae0; }
+/* ── reflection exercise ─────────────────────────────────── */
+.prompt {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  margin: 1rem 0;
+}
+.prompt p { margin: 0; }
+.prompt em { color: var(--muted); }
+textarea.reflect {
+  display: block;
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  padding: .8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--fg);
+  font: inherit;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+textarea.reflect:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(107, 77, 171, .18);
+}
+.save-state {
+  margin: .5rem 0 1rem;
+  font-size: .85rem;
+  color: var(--muted);
+  min-height: 1.2em;
+  transition: color .2s;
+}
+.save-state[data-state="saving"] { color: var(--muted); }
+.save-state[data-state="saved"]  { color: #6b4dab; }
+html[data-mode="dark"] .save-state[data-state="saved"] { color: #b39ae0; }

@@ -1,0 +1,60 @@
+# edu-dash — version history
+# One version = one message in the conversation, starting at 0.0.1.
+0.0.1  Feasibility check
+  Q: can multiple PWAs live on one origin?
+  A: yes — each needs its own manifest with distinct `id` + `start_url` + `scope`.
+  Files: none.
+0.0.2  File inventory question
+  Q: what are the essential files? can they be produced?
+  A: clarifying round — asked framework / app list / offline strategy / icon format.
+  Files: none.
+0.0.3  v0 draft — first full file drop
+  Inputs: plain static, apps {arabic, philo}, network-first, real PNG icons.
+  Files: netlify.toml · index.html · offline.html · register-sw.js
+         sw.js (per-app variant) · arabic/ + philo/ starters
+         README.md · tools/add-app.mjs
+0.0.4  Architecture Q&A + patch plan
+  Q: shared storage? PWA feature matrix? cross-app nav? install button?
+  A: edu:* shared namespace · feature capability table · target="_blank"
+     cross-app rule · per-app install prompt.
+  Files: revised plan only.
+0.0.5  Shared SW + shared modules + Supabase facade
+  Architecture change: single root `/sw.js` (scope "/") reading /apps.json.
+  Files: shared/{config,store,auth,install,ui}.js · sw.js v2
+         updated arabic/ + philo/ index.html + styles.css
+         launcher with cross-app target=_blank
+         manifests gain `shortcuts` + `screenshots`
+         Supabase schema + wiring (stubbed, backend='local').
+0.0.6  Modules, partials, page i18n (6 sub-messages)
+  New requirements:
+    • versions.log tracks progression.
+    • Each app AND each module may ship its own header.html / footer.html.
+    • Each module may add its own styles.css / *.js.
+    • Every HTML page declares window.I18N and uses data-i18n attributes.
+  Delivered (6 sub-messages):
+    msg 1: plan + versions.log
+    msg 2: shared/{config,store,auth,i18n,include,ui,install}.js
+           + register-sw.js + shared/debug.html
+    msg 3: netlify.toml · apps.json · index.html · offline.html
+           · sw.js v3 · README.md · tools/add-app.mjs
+    msg 4: arabic/{index.html, manifest.webmanifest, header.html,
+           footer.html, assets/css/styles.css, assets/js/app.js}
+    msg 5: arabic/year7/module1/{header.html, footer.html, styles.css,
+           draw.js, lesson1.html, lesson2.html}
+    msg 6: philo/{index.html, manifest.webmanifest, header.html,
+           footer.html, assets/css/styles.css, assets/js/app.js}
+           philo/term1/{header.html, footer.html, styles.css,
+           writing.js, lesson1.html}
+           docs/SUPABASE.md
+           versions.log (this file)
+  Status: complete for backend='local'. Supabase is a 3-file flip.
+0.0.7  — current — handoff
+  State: repo is complete, deployable to GitHub → Netlify with
+         CONFIG.backend = 'local'.
+  Supabase migration documented end-to-end in docs/SUPABASE.md.
+  No source changes needed in arabic/ or philo/ to switch backends.
+Next version ideas (optional, not started):
+  • add a third app via `node tools/add-app.mjs math …` (dry-run of scaffold)
+  • optional `common-i18n.js` per module when page count grows
+  • offline-write outbox for Supabase mode
+  • maskable icon variants per app

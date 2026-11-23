@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storage Debug — Edu Dash</title>
+<style>
+  body { margin:0; padding:1.25rem; font-family:system-ui,-apple-system,sans-serif;
+         background:#f6f7f9; color:#1b1f24; }
+  h1 { margin:0 0 .25rem; }
+  h2 { margin:1.5rem 0 .5rem; font-size:1rem; color:#0a7d5a; }
+  pre { background:#fff; border:1px solid #e3e6ea; border-radius:10px;
+        padding:.75rem 1rem; overflow:auto; max-height:40vh; font-size:.85rem; }
+  button { background:#0a7d5a; color:#fff; border:none; padding:.5rem 1rem;
+           border-radius:8px; cursor:pointer; font-size:.9rem; }
+  small { color:#667; }
+</style>
+</head>
+<body>
+  <h1>Storage Debug</h1>
+  <p><small>Open at any path — shows <b>origin-wide</b> state.</small></p>
+  <button id="reload">Refresh</button>
+  <h2>localStorage</h2>
+  <pre id="ls">…</pre>
+  <h2>session (<code>edu:session</code>)</h2>
+  <pre id="session">…</pre>
+  <h2>Cache Storage</h2>
+  <pre id="caches">…</pre>
+  <h2>Service Worker registrations</h2>
+  <pre id="sw">…</pre>
+<script>
+async function dump() {
+  const ls = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    try { ls[k] = JSON.parse(localStorage.getItem(k)); }
+    catch { ls[k] = localStorage.getItem(k); }
+  }
+  document.getElementById('ls').textContent = JSON.stringify(ls, null, 2) || '{}';
+  document.getElementById('session').textContent = ls['edu:session']
+    ? JSON.stringify(ls['edu:session'], null, 2)
+    : 'no session';
+  try {
+    const keys = await caches.keys();
+    const summary = {};
+    for (const k of keys) {
+      const c = await caches.open(k);
+      const reqs = await c.keys();
+      summary[k] = reqs.map((r) => new URL(r.url).pathname).sort();
+    }
+    document.getElementById('caches').textContent = JSON.stringify(summary, null, 2);
+  } catch (e) { document.getElementById('caches').textContent = String(e); }
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    document.getElementById('sw').textContent = JSON.stringify(
+      regs.map((r) => ({
+        scope: r.scope,
+        active:     r.active?.state,
+        waiting:    r.waiting?.state,
+        installing: r.installing?.state
+      })), null, 2);
+  } else {
+    document.getElementById('sw').textContent = 'serviceWorker unsupported';
+  }
+}
+document.getElementById('reload').addEventListener('click', dump);
+dump();
+</script>
+</body>
+</html>

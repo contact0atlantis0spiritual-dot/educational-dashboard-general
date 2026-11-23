@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lesson 1 — Introduction · Arabic Edu</title>
+  <meta name="theme-color" content="#0a7d5a">
+  <link rel="icon" href="/arabic/assets/icons/icon-96x96.png" sizes="96x96" type="image/png">
+  <link rel="apple-touch-icon" href="/arabic/assets/icons/icon-192x192.png">
+  <link rel="stylesheet" href="/arabic/assets/css/styles.css">
+  <link rel="stylesheet" href="/arabic/year7/module1/styles.css">
+  <!-- theme + lang pre-paint -->
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"ar"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+  <!-- All keys used anywhere on this page (partials + page). -->
+  <script>
+    window.I18N = {
+      // app header partial
+      'app.title':    { en: 'Arabic Edu',   fr: 'Éduc. Arabe',            ar: 'تعليم العربية' },
+      'nav.signin':   { en: 'Sign in',      fr: 'Connexion',              ar: 'تسجيل الدخول' },
+      'nav.install':  { en: 'Install',      fr: 'Installer',              ar: 'تثبيت' },
+      'nav.addHome':  { en: 'Add to Home',  fr: 'Ajouter à l\u2019accueil', ar: 'أضف للشاشة' },
+      'nav.lang':     { en: 'Language',     fr: 'Langue',                 ar: 'اللغة' },
+      'nav.theme':    { en: 'Toggle theme', fr: 'Changer de thème',       ar: 'تبديل المظهر' },
+      // app footer partial
+      'footer.copy':   { en: 'Arabic Edu',      fr: 'Éduc. Arabe',           ar: 'تعليم العربية' },
+      'footer.rights': { en: 'All rights reserved', fr: 'Tous droits réservés', ar: 'كل الحقوق محفوظة' },
+      // module header partial
+      'mod.nav':      { en: 'Module navigation', fr: 'Navigation du module', ar: 'تنقل الوحدة' },
+      'mod.back':     { en: 'Back to Arabic Edu', fr: 'Retour à Éduc. Arabe', ar: 'العودة إلى تعليم العربية' },
+      'mod.title':    { en: 'Year 7 · Module 1', fr: 'Année 7 · Module 1',   ar: 'السنة 7 · الوحدة 1' },
+      // module footer partial
+      'mod.copy':     { en: 'Year 7 · Module 1', fr: 'Année 7 · Module 1',   ar: 'السنة 7 · الوحدة 1' },
+      'mod.lesson1':  { en: 'Lesson 1',          fr: 'Leçon 1',              ar: 'الدرس 1' },
+      'mod.lesson2':  { en: 'Lesson 2',          fr: 'Leçon 2',              ar: 'الدرس 2' },
+      // page
+      'page.title':        { en: 'Lesson 1 — Introduction',
+                              fr: 'Leçon 1 — Introduction',
+                              ar: 'الدرس الأول — مقدمة' },
+      'page.hint':         { en: 'Draw with the pointer or finger.',
+                              fr: 'Dessinez avec le pointeur ou le doigt.',
+                              ar: 'ارسم بمؤشر الفأرة أو بإصبعك.' },
+      'page.boardLabel':   { en: 'Drawing board',
+                              fr: 'Tableau de dessin',
+                              ar: 'لوحة الرسم' },
+      'page.clear':        { en: 'Clear',         fr: 'Effacer',          ar: 'مسح' },
+      'page.markComplete': { en: 'Mark complete', fr: 'Marquer comme fait', ar: 'تحديد كمكتمل' },
+      'page.progress':     { en: 'Progress',      fr: 'Progression',      ar: 'التقدم' },
+      'page.completed':    { en: 'Completed',     fr: 'Terminé',          ar: 'مكتمل' },
+      'page.notStarted':   { en: 'Not started',   fr: 'Pas commencé',     ar: 'لم يبدأ' }
+    };
+  </script>
+</head>
+<body>
+  <div data-include="/arabic/header.html"></div>
+  <div data-include="/arabic/year7/module1/header.html"></div>
+  <main>
+    <h1 data-i18n="page.title">Lesson 1 — Introduction</h1>
+    <p  data-i18n="page.hint">Draw with the pointer or finger.</p>
+    <div class="canvas-wrap">
+      <canvas id="board" class="board"
+              aria-label="Drawing board"
+              data-i18n-attr="aria-label:page.boardLabel"></canvas>
+    </div>
+    <div class="btn-row">
+      <button id="clear"    class="btn" type="button" data-i18n="page.clear">Clear</button>
+      <button id="complete" class="btn" type="button" data-i18n="page.markComplete">Mark complete</button>
+    </div>
+    <p class="muted">
+      <small>
+        <span data-i18n="page.progress">Progress</span>:
+        <span id="status" aria-live="polite">—</span>
+      </small>
+    </p>
+  </main>
+  <div data-include="/arabic/year7/module1/footer.html"></div>
+  <div data-include="/arabic/footer.html"></div>
+  <script src="/shared/include.js"></script>
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import { initHeader } from '/shared/ui.js';
+    import { initInstallButton } from '/shared/install.js';
+    import { applyI18n } from '/shared/i18n.js';
+    import { attachCanvas, clearCanvas } from '/arabic/year7/module1/draw.js';
+    import { markLesson, getProgress } from '/arabic/assets/js/app.js';
+    initHeader();
+    initInstallButton();
+    const MODULE = 'year7/module1';
+    const LESSON = 'lesson1';
+    const canvas = document.getElementById('board');
+    attachCanvas(canvas, { width: 2.5 });
+    document.getElementById('clear').addEventListener('click', () => clearCanvas(canvas));
+    document.getElementById('complete').addEventListener('click', async () => {
+      await markLesson(MODULE, LESSON, true);
+      await renderStatus();
+    });
+    async function renderStatus() {
+      const p = await getProgress(MODULE);
+      const done = !!(p.lessons && p.lessons[LESSON]);
+      const el = document.getElementById('status');
+      if (!el) return;
+      el.dataset.i18n = done ? 'page.completed' : 'page.notStarted';
+      applyI18n(el);
+      el.style.color = done ? 'var(--brand)' : 'var(--muted)';
+    }
+    renderStatus();
+  </script>
+</body>
+</html>

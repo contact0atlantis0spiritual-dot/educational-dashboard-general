@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Philo Edu Dashboard</title>
+  <meta name="theme-color" content="#6b4dab">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Philo Edu">
+  <link rel="manifest" href="/philo/manifest.webmanifest">
+  <link rel="icon" href="/philo/assets/icons/icon-96x96.png" sizes="96x96" type="image/png">
+  <link rel="apple-touch-icon" href="/philo/assets/icons/icon-192x192.png">
+  <link rel="stylesheet" href="/philo/assets/css/styles.css">
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"fr"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+  <script>
+    window.I18N = {
+      // app / header partial
+      'app.title':    { en: 'Philo Edu',    fr: 'Philo Édu',            ar: 'تعليم الفلسفة' },
+      'nav.signin':   { en: 'Sign in',      fr: 'Connexion',            ar: 'تسجيل الدخول' },
+      'nav.install':  { en: 'Install',      fr: 'Installer',            ar: 'تثبيت' },
+      'nav.addHome':  { en: 'Add to Home',  fr: 'Ajouter à l\u2019accueil', ar: 'أضف للشاشة' },
+      'nav.lang':     { en: 'Language',     fr: 'Langue',               ar: 'اللغة' },
+      'nav.theme':    { en: 'Toggle theme', fr: 'Changer de thème',     ar: 'تبديل المظهر' },
+      // footer partial
+      'footer.copy':   { en: 'Philo Edu',         fr: 'Philo Édu',            ar: 'تعليم الفلسفة' },
+      'footer.rights': { en: 'All rights reserved', fr: 'Tous droits réservés', ar: 'كل الحقوق محفوظة' },
+      // page
+      'page.welcome':    { en: 'Welcome',       fr: 'Bienvenue',          ar: 'مرحباً' },
+      'page.subtitle':   { en: 'Pick a module to start',
+                            fr: 'Choisissez un module pour commencer',
+                            ar: 'اختر وحدة للبدء' },
+      'page.modules':    { en: 'Modules',       fr: 'Modules',            ar: 'الوحدات' },
+      'page.term1':      { en: 'Term 1 · Introduction to Philosophy',
+                            fr: 'Terme 1 · Introduction à la philosophie',
+                            ar: 'الفصل 1 · مقدمة في الفلسفة' },
+      'page.lesson1':    { en: 'Lesson 1 — What is philosophy?',
+                            fr: 'Leçon 1 — Qu\u2019est-ce que la philosophie ?',
+                            ar: 'الدرس 1 — ما هي الفلسفة؟' },
+      'page.otherApps':  { en: 'Other apps',    fr: 'Autres apps',       ar: 'تطبيقات أخرى' },
+      'page.arabic':     { en: 'Arabic Edu ↗',  fr: 'Éduc. Arabe ↗',     ar: 'تعليم العربية ↗' },
+      'page.visits':     { en: 'Visits on this device',
+                            fr: 'Visites sur cet appareil',
+                            ar: 'الزيارات على هذا الجهاز' }
+    };
+  </script>
+</head>
+<body>
+  <div data-include="/philo/header.html"></div>
+  <main>
+    <h1 data-i18n="page.welcome">Bienvenue</h1>
+    <p  data-i18n="page.subtitle">Choisissez un module pour commencer</p>
+    <h2 data-i18n="page.modules">Modules</h2>
+    <section class="module-list">
+      <a class="module-card" href="/philo/term1/lesson1.html">
+        <strong data-i18n="page.term1">Term 1 · Introduction to Philosophy</strong>
+        <small  data-i18n="page.lesson1">Lesson 1 — What is philosophy?</small>
+      </a>
+    </section>
+    <h2 data-i18n="page.otherApps">Autres apps</h2>
+    <p>
+      <a data-app-link="arabic"
+         href="/arabic/"
+         target="_blank" rel="noopener noreferrer"
+         data-i18n="page.arabic">Arabic Edu ↗</a>
+    </p>
+    <p class="muted">
+      <small>
+        <span data-i18n="page.visits">Visits on this device</span>:
+        <span id="visits">–</span>
+      </small>
+    </p>
+  </main>
+  <div data-include="/philo/footer.html"></div>
+  <script src="/shared/include.js"></script>
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import { initHeader, externalAppLink } from '/shared/ui.js';
+    import { initInstallButton } from '/shared/install.js';
+    import '/shared/i18n.js';
+    import { trackVisit } from '/philo/assets/js/app.js';
+    initHeader();
+    initInstallButton();
+    externalAppLink('arabic');
+    trackVisit().then((n) => {
+      const el = document.getElementById('visits');
+      if (el) el.textContent = String(n);
+    }).catch(() => {});
+  </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "id": "/arabic/",
+  "name": "Arabic Edu Dashboard",
+  "short_name": "Arabic Edu",
+  "description": "Arabic education dashboard",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/arabic/",
+  "scope": "/arabic/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0a7d5a",
+  "background_color": "#f6f7f9",
+  "categories": ["education"],
+  "icons": [
+    { "src": "/arabic/assets/icons/icon-96x96.png",   "sizes": "96x96",   "type": "image/png", "purpose": "any" },
+    { "src": "/arabic/assets/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "/arabic/assets/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/arabic/assets/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Lesson 1",
+      "short_name": "L1",
+      "url": "/arabic/year7/module1/lesson1.html",
+      "icons": [{ "src": "/arabic/assets/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Lesson 2",
+      "short_name": "L2",
+      "url": "/arabic/year7/module1/lesson2.html",
+      "icons": [{ "src": "/arabic/assets/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [
+    { "src": "/arabic/assets/screenshots/home.png",   "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow" },
+    { "src": "/arabic/assets/screenshots/lesson.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide" }
+  ]
+}

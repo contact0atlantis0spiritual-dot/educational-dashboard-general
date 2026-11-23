@@ -1,0 +1,50 @@
+[build]
+  publish = "."
+# ── Service worker: never cache, updates must land on next visit ──
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+[[headers]]
+  for = "/register-sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+# ── Manifests ──
+[[headers]]
+  for = "/*/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=3600"
+# ── Config / apps list: short cache so new apps appear quickly ──
+[[headers]]
+  for = "/apps.json"
+  [headers.values]
+    Cache-Control = "public, max-age=60"
+[[headers]]
+  for = "/shared/config.js"
+  [headers.values]
+    Cache-Control = "public, max-age=60"
+# ── HTML partials: short cache; SW handles offline ──
+[[headers]]
+  for = "/*/header.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+[[headers]]
+  for = "/*/footer.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+[[headers]]
+  for = "/*/*/header.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+[[headers]]
+  for = "/*/*/footer.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+# ── Global safety headers ──
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"

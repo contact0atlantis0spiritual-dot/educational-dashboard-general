@@ -1,0 +1,102 @@
+/* philo — app-level styles. Module-level styles live in the module folder. */
+:root {
+  --brand: #6b4dab;
+  --bg:    #f6f7f9;
+  --fg:    #1b1f24;
+  --card:  #ffffff;
+  --line:  #e3e6ea;
+  --muted: #667;
+}
+html[data-mode="dark"] {
+  --bg:    #0f1216;
+  --fg:    #e9edf2;
+  --card:  #171c22;
+  --line:  #242b33;
+  --muted: #8a95a1;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  transition: background .15s, color .15s;
+  display: flex;
+  flex-direction: column;
+}
+header {
+  background: var(--brand);
+  color: #fff;
+  padding: 1rem 1.25rem;
+  padding-top: calc(1rem + env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+header strong { font-size: 1.05rem; }
+.hdr-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.hdr-actions button,
+.hdr-actions select {
+  background: rgba(255, 255, 255, .15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .25);
+  padding: .4rem .7rem;
+  border-radius: 8px;
+  font-size: .9rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.hdr-actions button:hover,
+.hdr-actions select:hover { background: rgba(255, 255, 255, .25); }
+.hdr-actions [data-signedin="1"] { background: rgba(255, 255, 255, .35); }
+.hdr-actions [hidden] { display: none !important; }
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.25rem;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+}
+h1 { margin: 0 0 .25rem; }
+h2 { margin: 1.75rem 0 .75rem; font-size: 1.1rem; }
+a { color: var(--brand); }
+html[data-mode="dark"] a { color: #b39ae0; }
+.muted { color: var(--muted); }
+.module-list { display: grid; gap: .65rem; }
+.module-card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: .9rem 1rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .15s;
+}
+.module-card:hover { border-color: var(--brand); }
+.module-card strong { display: block; }
+.module-card small  { color: var(--muted); }
+.btn {
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: .55rem .9rem;
+  font-size: .95rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn[disabled] { opacity: .55; cursor: not-allowed; }
+footer {
+  padding: 1rem 1.25rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  text-align: center;
+  font-size: .85rem;
+}

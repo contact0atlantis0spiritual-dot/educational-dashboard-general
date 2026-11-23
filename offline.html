@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Offline — Edu Dash</title>
+  <link rel="stylesheet" href="/arabic/assets/css/styles.css">
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"en"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+  <script>
+    window.I18N = {
+      'offline.title': { en: "You're offline",       fr: 'Vous êtes hors ligne',    ar: 'أنت غير متصل' },
+      'offline.p1':    { en: "This page hasn't been saved on this device yet.",
+                          fr: "Cette page n'a pas encore été enregistrée sur cet appareil.",
+                          ar: 'لم يتم حفظ هذه الصفحة على هذا الجهاز بعد.' },
+      'offline.p2':    { en: 'Pages you already opened are available offline.',
+                          fr: 'Les pages déjà ouvertes sont disponibles hors ligne.',
+                          ar: 'الصفحات التي فتحتها سابقاً متاحة دون اتصال.' },
+      'offline.home':  { en: 'Back to apps',         fr: 'Retour aux apps',         ar: 'العودة إلى التطبيقات' }
+    };
+  </script>
+</head>
+<body>
+  <main>
+    <h1 data-i18n="offline.title">You're offline</h1>
+    <p  data-i18n="offline.p1">This page hasn't been saved on this device yet.</p>
+    <p  data-i18n="offline.p2">Pages you already opened are available offline.</p>
+    <p><a href="/" data-i18n="offline.home">Back to apps</a></p>
+  </main>
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import '/shared/i18n.js';
+  </script>
+</body>
+</html>

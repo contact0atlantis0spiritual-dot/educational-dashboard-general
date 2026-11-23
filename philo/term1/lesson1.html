@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Leçon 1 — Qu'est-ce que la philosophie ? · Philo Edu</title>
+  <meta name="theme-color" content="#6b4dab">
+  <link rel="icon" href="/philo/assets/icons/icon-96x96.png" sizes="96x96" type="image/png">
+  <link rel="apple-touch-icon" href="/philo/assets/icons/icon-192x192.png">
+  <link rel="stylesheet" href="/philo/assets/css/styles.css">
+  <link rel="stylesheet" href="/philo/term1/styles.css">
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"fr"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+  <script>
+    window.I18N = {
+      // app header partial
+      'app.title':    { en: 'Philo Edu',    fr: 'Philo Édu',            ar: 'تعليم الفلسفة' },
+      'nav.signin':   { en: 'Sign in',      fr: 'Connexion',            ar: 'تسجيل الدخول' },
+      'nav.install':  { en: 'Install',      fr: 'Installer',            ar: 'تثبيت' },
+      'nav.addHome':  { en: 'Add to Home',  fr: 'Ajouter à l\u2019accueil', ar: 'أضف للشاشة' },
+      'nav.lang':     { en: 'Language',     fr: 'Langue',               ar: 'اللغة' },
+      'nav.theme':    { en: 'Toggle theme', fr: 'Changer de thème',     ar: 'تبديل المظهر' },
+      // app footer partial
+      'footer.copy':   { en: 'Philo Edu',         fr: 'Philo Édu',            ar: 'تعليم الفلسفة' },
+      'footer.rights': { en: 'All rights reserved', fr: 'Tous droits réservés', ar: 'كل الحقوق محفوظة' },
+      // module header partial
+      'mod.nav':     { en: 'Module navigation', fr: 'Navigation du module',
+                       ar: 'تنقل الوحدة' },
+      'mod.back':    { en: 'Back to Philo Edu', fr: 'Retour à Philo Édu',
+                       ar: 'العودة إلى تعليم الفلسفة' },
+      'mod.title':   { en: 'Term 1 · Introduction to Philosophy',
+                       fr: 'Terme 1 · Introduction à la philosophie',
+                       ar: 'الفصل 1 · مقدمة في الفلسفة' },
+      // module footer partial
+      'mod.copy':    { en: 'Term 1 · Introduction to Philosophy',
+                       fr: 'Terme 1 · Introduction à la philosophie',
+                       ar: 'الفصل 1 · مقدمة في الفلسفة' },
+      'mod.lesson1': { en: 'Lesson 1', fr: 'Leçon 1', ar: 'الدرس 1' },
+      // page
+      'page.title':      { en: 'Lesson 1 — What is philosophy?',
+                            fr: 'Leçon 1 — Qu\u2019est-ce que la philosophie ?',
+                            ar: 'الدرس 1 — ما هي الفلسفة؟' },
+      'page.prompt':     { en: 'Socrates said the unexamined life is not worth living. In your own words, what does that mean?',
+                            fr: 'Socrate disait que la vie sans examen ne vaut pas la peine d\u2019être vécue. Qu\u2019est-ce que cela signifie, selon vous ?',
+                            ar: 'قال سقراط إن الحياة غير المفحوصة لا تستحق أن تُعاش. ماذا يعني ذلك بكلماتك؟' },
+      'page.placeholder':{ en: 'Write your reflection here…',
+                            fr: 'Écrivez votre réflexion ici…',
+                            ar: 'اكتب تأملك هنا…' },
+      'page.saving':     { en: 'Saving…',  fr: 'Enregistrement…', ar: 'جارٍ الحفظ…' },
+      'page.saved':      { en: 'Saved',    fr: 'Enregistré',       ar: 'تم الحفظ' },
+      'page.markComplete': { en: 'Mark complete',  fr: 'Marquer comme fait',
+                              ar: 'تحديد كمكتمل' },
+      'page.progress':     { en: 'Progress',       fr: 'Progression',         ar: 'التقدم' },
+      'page.completed':    { en: 'Completed',      fr: 'Terminé',             ar: 'مكتمل' },
+      'page.notStarted':   { en: 'Not started',    fr: 'Pas commencé',        ar: 'لم يبدأ' }
+    };
+  </script>
+</head>
+<body>
+  <div data-include="/philo/header.html"></div>
+  <div data-include="/philo/term1/header.html"></div>
+  <main>
+    <h1 data-i18n="page.title">Leçon 1 — Qu'est-ce que la philosophie ?</h1>
+    <div class="prompt">
+      <p data-i18n="page.prompt">Socrate disait que la vie sans examen ne vaut pas la peine d'être vécue. Qu'est-ce que cela signifie, selon vous ?</p>
+    </div>
+    <textarea id="reflect" class="reflect"
+              data-i18n-attr="placeholder:page.placeholder"
+              placeholder="Écrivez votre réflexion ici…"></textarea>
+    <p id="save-state" class="save-state" aria-live="polite"></p>
+    <div class="btn-row">
+      <button id="complete" class="btn" type="button" data-i18n="page.markComplete">Marquer comme fait</button>
+    </div>
+    <p class="muted">
+      <small>
+        <span data-i18n="page.progress">Progression</span>:
+        <span id="status" aria-live="polite">—</span>
+      </small>
+    </p>
+  </main>
+  <div data-include="/philo/term1/footer.html"></div>
+  <div data-include="/philo/footer.html"></div>
+  <script src="/shared/include.js"></script>
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import { initHeader } from '/shared/ui.js';
+    import { initInstallButton } from '/shared/install.js';
+    import { applyI18n } from '/shared/i18n.js';
+    import { attachAutosave } from '/philo/term1/writing.js';
+    import { getDraft, setDraft, markLesson, getProgress } from '/philo/assets/js/app.js';
+    initHeader();
+    initInstallButton();
+    const MODULE = 'term1';
+    const LESSON = 'lesson1';
+    const ta  = document.getElementById('reflect');
+    const out = document.getElementById('save-state');
+    // Load saved draft BEFORE attaching autosave so `lastSaved` starts correct.
+    (async () => {
+      const draft = await getDraft(MODULE, LESSON);
+      if (draft) ta.value = draft;
+      attachAutosave(ta, {
+        delay: 600,
+        onSave: (value) => setDraft(MODULE, LESSON, value),
+        onState: (s) => {
+          if (s === 'saving')      { out.dataset.state = 'saving'; out.dataset.i18n = 'page.saving'; }
+          else if (s === 'saved')  { out.dataset.state = 'saved';  out.dataset.i18n = 'page.saved';  }
+          else                     { out.dataset.state = '';       out.dataset.i18n = '';            }
+          applyI18n(out);
+        }
+      });
+    })();
+    document.getElementById('complete').addEventListener('click', async () => {
+      // Flush a final save so "mark complete" never leaves the textarea unsaved.
+      await setDraft(MODULE, LESSON, ta.value);
+      await markLesson(MODULE, LESSON, true);
+      await renderStatus();
+    });
+    async function renderStatus() {
+      const p = await getProgress(MODULE);
+      const done = !!(p.lessons && p.lessons[LESSON]);
+      const el = document.getElementById('status');
+      if (!el) return;
+      el.dataset.i18n = done ? 'page.completed' : 'page.notStarted';
+      applyI18n(el);
+      el.style.color = done ? 'var(--brand)' : 'var(--muted)';
+    }
+    renderStatus();
+  </script>
+</body>
+</html>

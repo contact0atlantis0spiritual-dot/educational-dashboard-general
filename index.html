@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edu Dash — Apps</title>
+  <meta name="theme-color" content="#0a7d5a">
+  <link rel="stylesheet" href="/arabic/assets/css/styles.css">
+  <script>
+    try {
+      const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
+      const l = JSON.parse(localStorage.getItem('edu:lang') || '"en"');
+      document.documentElement.dataset.mode = m;
+      document.documentElement.lang = l;
+      document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
+    } catch {}
+  </script>
+  <script>
+    window.I18N = {
+      'launcher.title':   { en: 'Edu Dash',              fr: 'Edu Dash',             ar: 'إديو داش' },
+      'launcher.tagline': { en: 'Pick an app. Each one installs separately.',
+                            fr: 'Choisissez une app. Chacune s\u2019installe séparément.',
+                            ar: 'اختر تطبيقاً. كل تطبيق يُثبَّت بشكل مستقل.' },
+      'launcher.loading': { en: 'Loading apps…',         fr: 'Chargement…',          ar: 'جارٍ التحميل…' },
+      'launcher.error':   { en: 'Could not load apps.',   fr: 'Impossible de charger les apps.',
+                            ar: 'تعذّر تحميل التطبيقات.' },
+      'nav.signin':       { en: 'Sign in',                fr: 'Connexion',            ar: 'تسجيل الدخول' },
+      'nav.lang':         { en: 'Language',               fr: 'Langue',               ar: 'اللغة' },
+      'nav.theme':        { en: 'Toggle theme',           fr: 'Changer de thème',     ar: 'تبديل المظهر' }
+    };
+  </script>
+</head>
+<body>
+  <header>
+    <strong data-i18n="launcher.title">Edu Dash</strong>
+    <div class="hdr-actions">
+      <button id="theme-btn" aria-label="Toggle theme" data-i18n-attr="aria-label:nav.theme" type="button">☾</button>
+      <select id="lang-sel" aria-label="Language" data-i18n-attr="aria-label:nav.lang">
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="ar">العربية</option>
+      </select>
+    </div>
+  </header>
+  <main>
+    <p data-i18n="launcher.tagline">Pick an app. Each one installs separately.</p>
+    <section id="apps" aria-live="polite">
+      <p data-i18n="launcher.loading">Loading apps…</p>
+    </section>
+  </main>
+  <script src="/register-sw.js" defer></script>
+  <script type="module">
+    import { initTheme, initLang } from '/shared/ui.js';
+    import { applyI18n } from '/shared/i18n.js';
+    import { prefs } from '/shared/store.js';
+    initTheme();
+    initLang();
+    const container = document.getElementById('apps');
+    function cardHtml(a) {
+      const n = a.short_name || a.name;
+      return `<a class="card" href="${a.path}" target="_blank" rel="noopener" lang="${a.lang}" dir="${a.dir}">
+        <img src="${a.icon}" alt="" width="48" height="48">
+        <span><strong>${n}</strong><small>${a.name}</small></span>
+      </a>`;
+    }
+    fetch('/apps.json', { cache: 'no-cache' })
+      .then((r) => r.json())
+      .then(({ apps = [] }) => {
+        container.innerHTML = apps.map(cardHtml).join('');
+      })
+      .catch(() => {
+        container.innerHTML = `<p data-i18n="launcher.error">Could not load apps.</p>`;
+        applyI18n(container);
+      });
+  </script>
+  <style>
+    .card { display:flex; align-items:center; gap:1rem; text-decoration:none; color:inherit;
+            background:var(--card,#fff); border:1px solid var(--line,#e3e6ea);
+            border-radius:14px; padding:.9rem 1rem; margin:.5rem 0; max-width:560px; }
+    .card:hover { border-color:#c9ced6; }
+    .card img { width:48px; height:48px; border-radius:12px; flex:none; }
+    .card strong { display:block; }
+    .card small { color:var(--muted,#7a828c); }
+  </style>
+</body>
+</html>
