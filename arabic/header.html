@@ -1,18 +1,40 @@
-<header>
-  <strong data-i18n="app.title">Arabic Edu</strong>
-  <div class="hdr-actions">
-    <button id="theme-btn" type="button"
-            aria-label="Toggle theme"
-            data-i18n-attr="aria-label:nav.theme">☾</button>
-    <select id="lang-sel" aria-label="Language"
-            data-i18n-attr="aria-label:nav.lang">
-      <option value="ar">العربية</option>
-      <option value="fr">Français</option>
-      <option value="en">English</option>
-    </select>
-    <button id="install-btn" type="button" hidden
-            data-i18n="nav.install">Install</button>
-    <button id="user-chip" type="button"
-            data-i18n="nav.signin">Sign in</button>
+<header class="app-header">
+  <div class="app-header__inner">
+    <h1 class="app-header__title">
+      <img src="/arabic/assets/icons/icon-96x96.png"
+           alt="" width="26" height="26"
+           class="app-header__icon">
+      <span data-i18n="app.title">Arabic Edu</span>
+    </h1>
+
+    <div class="app-header__controls">
+      <span class="app-header__status" title="Online">
+        <span class="status-dot"></span>
+      </span>
+
+      <button id="install-btn" type="button" hidden
+              class="header-btn"
+              data-i18n="nav.install">Install</button>
+
+      <select id="lang-sel" class="lang-select"
+              aria-label="Language"
+              data-i18n-attr="aria-label:nav.lang">
+        <option value="ar">العربية</option>
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+      </select>
+
+      <button id="theme-btn" type="button"
+              class="theme-toggle"
+              aria-label="Toggle theme"
+              data-i18n-attr="aria-label:nav.theme">
+        <span class="icon-sun"  aria-hidden="true">☀</span>
+        <span class="icon-moon" aria-hidden="true">☽</span>
+      </button>
+
+      <button id="user-chip" type="button"
+              class="header-btn"
+              data-i18n="nav.signin">Sign in</button>
+    </div>
   </div>
 </header>

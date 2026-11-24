@@ -347,6 +347,12 @@ Loads `[data-include]` partials — top-level in parallel, nested recursively �
 // shared/include.js — <div data-include="/arabic/header.html"></div> loader.
 const cache = new Map();
 
+// Readiness contract: ui.js / install.js wait for this so their inits
+// don't run before the header partial has been injected into the DOM.
+window.__partialsLoaded = false;
+let _resolveReady;
+window.partialsReady = new Promise((res) => { _resolveReady = res; });
+
 async function fetchPartial(url) {
   if (cache.has(url)) return cache.get(url);
   const res = await fetch(url, { cache: 'no-cache' });
@@ -377,6 +383,8 @@ async function processNode(node) {
 async function run() {
   const roots = [...document.querySelectorAll('[data-include]')];
   await Promise.all(roots.map(processNode));
+  window.__partialsLoaded = true;
+  _resolveReady();
   document.dispatchEvent(new CustomEvent('partials:ready'));
 }
 
@@ -461,15 +469,21 @@ import { applyI18n } from './i18n.js';
 
 function currentLang() { return prefs.get().lang || document.documentElement.lang || 'en'; }
 
+// Idempotency guard: an element is wired at most once.
+const inited = new WeakSet();
+
 export function initTheme() {
   const btn = document.getElementById('theme-btn');
-  if (!btn) return;
+  if (!btn || inited.has(btn)) return;
+  inited.add(btn);
+
   const sync = (mode) => {
     document.documentElement.dataset.mode = mode;
     btn.textContent = mode === 'dark' ? '☀' : '☾';
     btn.setAttribute('aria-pressed', mode === 'dark' ? 'true' : 'false');
   };
   sync(prefs.get().mode);
+
   btn.addEventListener('click', async () => {
     const next = prefs.get().mode === 'dark' ? 'light' : 'dark';
     sync(next);
@@ -481,7 +495,9 @@ export function initTheme() {
 
 export function initLang(selectEl) {
   const sel = selectEl || document.getElementById('lang-sel');
-  if (!sel) return;
+  if (!sel || inited.has(sel)) return;
+  inited.add(sel);
+
   const apply = (lang) => {
     const l = lang || document.documentElement.lang || 'en';
     sel.value = l;
@@ -489,6 +505,7 @@ export function initLang(selectEl) {
     document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
   };
   apply(prefs.get().lang);
+
   sel.addEventListener('change', async () => {
     apply(sel.value);
     await prefs.setLang(sel.value);
@@ -499,7 +516,9 @@ export function initLang(selectEl) {
 
 export function initUserChip() {
   const chip = document.getElementById('user-chip');
-  if (!chip) return;
+  if (!chip || inited.has(chip)) return;
+  inited.add(chip);
+
   auth.onChange((user) => {
     if (user) {
       chip.textContent = user.name || user.email || 'You';
@@ -511,9 +530,9 @@ export function initUserChip() {
     chip.title  = user?.email || '';
     chip.dataset.signedin = user ? '1' : '0';
   });
+
   chip.addEventListener('click', async () => {
     if (!auth.getUser()) {
-      // Testing UI — swap for a real form in Supabase mode
       const email = prompt('Email');    if (!email) return;
       const pw    = prompt('Password'); if (!pw)    return;
       try { await auth.signIn(email, pw); }
@@ -522,7 +541,8 @@ export function initUserChip() {
       await auth.signOut();
     }
   });
-  // Keep current lang consistent for the chip when language changes while signed out.
+
+  // Keep the chip's "Sign in" label in the current language when signed out.
   window.addEventListener('edu:lang-changed', () => {
     if (!auth.getUser()) applyI18n(chip);
   });
@@ -537,10 +557,11 @@ export function externalAppLink(appId) {
 }
 
 // Convenience: bring up all header controls with one call.
+// Waits for the partial loader if it's present on the page.
 export function initHeader() {
-  initTheme();
-  initLang();
-  initUserChip();
+  const go = () => { initTheme(); initLang(); initUserChip(); };
+  if (window.__partialsLoaded) { go(); return; }
+  (window.partialsReady || Promise.resolve()).then(go);
 }
 ```
 
@@ -550,50 +571,61 @@ export function initHeader() {
 
 ```js
 // shared/install.js — one install prompt per app, plus manual iOS hint.
-export function initInstallButton() {
+const isIos  = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const inited = new WeakSet();
+let deferredPrompt = null;
+
+// Window-level listeners are registered immediately — beforeinstallprompt
+// can fire before the header partial has been injected into the DOM.
+addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  showIfWired('nav.install');
+});
+addEventListener('appinstalled', () => {
+  deferredPrompt = null;
   const btn = document.getElementById('install-btn');
-  if (!btn) return;
+  if (btn) btn.hidden = true;
+});
 
-  const standalone =
-    matchMedia('(display-mode: standalone)').matches ||
-    matchMedia('(display-mode: minimal-ui)').matches  ||
-    navigator.standalone === true;
-  if (standalone) { btn.hidden = true; return; }
+function showIfWired(i18nKey) {
+  const btn = document.getElementById('install-btn');
+  if (!btn || !inited.has(btn)) return;     // not injected / not yet wired
+  btn.hidden = false;
+  btn.dataset.i18n = i18nKey;
+  document.dispatchEvent(new CustomEvent('partials:ready'));
+}
 
-  let promptEvent = null;
+export function initInstallButton() {
+  const run = () => {
+    const btn = document.getElementById('install-btn');
+    if (!btn || inited.has(btn)) return;
+    inited.add(btn);
 
-  addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    promptEvent = e;
-    btn.hidden = false;
-    btn.setAttribute('data-i18n', 'nav.install');
-    // trigger i18n for the newly-visible label
-    document.dispatchEvent(new CustomEvent('partials:ready'));
-  });
+    const standalone =
+      matchMedia('(display-mode: standalone)').matches ||
+      matchMedia('(display-mode: minimal-ui)').matches  ||
+      navigator.standalone === true;
+    if (standalone) { btn.hidden = true; return; }
 
-  addEventListener('appinstalled', () => {
-    btn.hidden = true;
-    promptEvent = null;
-  });
+    if (deferredPrompt)  showIfWired('nav.install');
+    else if (isIos)      showIfWired('nav.addHome');
 
-  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  if (isIos) {
-    btn.hidden = false;
-    btn.setAttribute('data-i18n', 'nav.addHome');
-    document.dispatchEvent(new CustomEvent('partials:ready'));
-  }
+    btn.addEventListener('click', async () => {
+      if (isIos) {
+        alert('Tap the Share button, then "Add to Home Screen".');
+        return;
+      }
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      try { await deferredPrompt.userChoice; } catch {}
+      deferredPrompt = null;
+      btn.hidden = true;
+    });
+  };
 
-  btn.addEventListener('click', async () => {
-    if (isIos) {
-      alert('Tap the Share button, then "Add to Home Screen".');
-      return;
-    }
-    if (!promptEvent) return;
-    promptEvent.prompt();
-    try { await promptEvent.userChoice; } catch {}
-    promptEvent = null;
-    btn.hidden = true;
-  });
+  if (window.__partialsLoaded) { run(); return; }
+  (window.partialsReady || Promise.resolve()).then(run);
 }
 ```
 

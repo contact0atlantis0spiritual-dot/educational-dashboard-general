@@ -5,7 +5,6 @@ import { applyI18n } from './i18n.js';
 
 function currentLang() { return prefs.get().lang || document.documentElement.lang || 'en'; }
 
-// Idempotency guard: an element is wired at most once.
 const inited = new WeakSet();
 
 export function initTheme() {
@@ -15,8 +14,8 @@ export function initTheme() {
 
   const sync = (mode) => {
     document.documentElement.dataset.mode = mode;
-    btn.textContent = mode === 'dark' ? '☀' : '☾';
     btn.setAttribute('aria-pressed', mode === 'dark' ? 'true' : 'false');
+    // Icon swap is CSS-driven (html[data-mode="dark"] .icon-sun / .icon-moon).
   };
   sync(prefs.get().mode);
 
@@ -78,13 +77,24 @@ export function initUserChip() {
     }
   });
 
-  // Keep the chip's "Sign in" label in the current language when signed out.
   window.addEventListener('edu:lang-changed', () => {
     if (!auth.getUser()) applyI18n(chip);
   });
 }
 
-/** Mark cross-app links to open in a new tab so installed windows don't morph. */
+export function initConnectionStatus() {
+  const dot = document.querySelector('.status-dot');
+  if (!dot) return;
+  const sync = () => {
+    dot.classList.toggle('offline', !navigator.onLine);
+    const parent = dot.parentElement;
+    if (parent) parent.setAttribute('title', navigator.onLine ? 'Online' : 'Offline');
+  };
+  sync();
+  window.addEventListener('online',  sync);
+  window.addEventListener('offline', sync);
+}
+
 export function externalAppLink(appId) {
   const a = document.querySelector(`[data-app-link="${appId}"]`);
   if (!a) return;
@@ -92,10 +102,13 @@ export function externalAppLink(appId) {
   a.rel = 'noopener noreferrer';
 }
 
-// Convenience: bring up all header controls with one call.
-// Waits for the partial loader if it's present on the page.
 export function initHeader() {
-  const go = () => { initTheme(); initLang(); initUserChip(); };
+  const go = () => {
+    initTheme();
+    initLang();
+    initUserChip();
+    initConnectionStatus();
+  };
   if (window.__partialsLoaded) { go(); return; }
   (window.partialsReady || Promise.resolve()).then(go);
 }
