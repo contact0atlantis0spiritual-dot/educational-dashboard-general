@@ -2,10 +2,14 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Edu Dash — Apps</title>
-  <meta name="theme-color" content="#0a7d5a">
+  <meta name="theme-color" content="#4a7fd9">
+  <link rel="icon" href="/arabic/assets/icons/icon-96x96.png" sizes="96x96" type="image/png">
+  <link rel="apple-touch-icon" href="/arabic/assets/icons/icon-192x192.png">
   <link rel="stylesheet" href="/arabic/assets/css/styles.css">
+
+  <!-- Pre-paint theme + lang so there's no flash -->
   <script>
     try {
       const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
@@ -15,72 +19,466 @@
       document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
     } catch {}
   </script>
+
+  <!-- Page-scoped translations: header + footer + launcher text -->
   <script>
     window.I18N = {
-      'launcher.title':   { en: 'Edu Dash',              fr: 'Edu Dash',             ar: 'إديو داش' },
-      'launcher.tagline': { en: 'Pick an app. Each one installs separately.',
-                            fr: 'Choisissez une app. Chacune s\u2019installe séparément.',
-                            ar: 'اختر تطبيقاً. كل تطبيق يُثبَّت بشكل مستقل.' },
-      'launcher.loading': { en: 'Loading apps…',         fr: 'Chargement…',          ar: 'جارٍ التحميل…' },
-      'launcher.error':   { en: 'Could not load apps.',   fr: 'Impossible de charger les apps.',
+      // Header
+      'app.title':         { en: 'Edu Dash',           fr: 'Edu Dash',              ar: 'إديو داش' },
+      'nav.signin':        { en: 'Sign in',            fr: 'Connexion',             ar: 'تسجيل الدخول' },
+      'nav.install':       { en: 'Install',            fr: 'Installer',             ar: 'تثبيت' },
+      'nav.addHome':       { en: 'Add to Home',        fr: 'Ajouter à l’accueil',   ar: 'أضف للشاشة' },
+      'nav.lang':          { en: 'Language',           fr: 'Langue',                ar: 'اللغة' },
+      'nav.theme':         { en: 'Toggle theme',       fr: 'Changer de thème',      ar: 'تبديل المظهر' },
+      'nav.statusOnline':  { en: 'Online',             fr: 'En ligne',              ar: 'متصل' },
+      'nav.statusOffline': { en: 'Offline',            fr: 'Hors ligne',            ar: 'غير متصل' },
+
+      // Footer
+      'footer.version':         { en: 'Version 0.0.7',            fr: 'Version 0.0.7',
+                                  ar: 'الإصدار 0.0.7' },
+      'footer.copy':            { en: 'Edu Dash',                 fr: 'Edu Dash',
+                                  ar: 'إديو داش' },
+      'footer.confidentiality': { en: 'Confidentiality Policy',   fr: 'Politique de confidentialité',
+                                  ar: 'سياسة الخصوصية' },
+      'footer.terms':           { en: 'Terms of Use',             fr: 'Conditions d’utilisation',
+                                  ar: 'شروط الاستخدام' },
+      'footer.contact':         { en: 'Contact',                  fr: 'Contact',
+                                  ar: 'اتصل بنا' },
+      'footer.developer':       { en: 'Developed by: Mejri Ziad', fr: 'Développé par : Mejri Ziad',
+                                  ar: 'طُوِّر بواسطة: ماجري زياد' },
+      'footer.hosted':          { en: 'Hosted on GitHub and Netlify',
+                                  fr: 'Hébergé sur GitHub et Netlify',
+                                  ar: 'مستضاف على GitHub وNetlify' },
+
+      // Launcher page
+      'launcher.tagline': { en: 'Your learning hubs',
+                            fr: 'Vos plateformes d’apprentissage',
+                            ar: 'منصات التعلم الخاصة بك' },
+      'launcher.loading': { en: 'Loading apps…',  fr: 'Chargement…',  ar: 'جارٍ التحميل…' },
+      'launcher.error':   { en: 'Could not load apps.',
+                            fr: 'Impossible de charger les apps.',
                             ar: 'تعذّر تحميل التطبيقات.' },
-      'nav.signin':       { en: 'Sign in',                fr: 'Connexion',            ar: 'تسجيل الدخول' },
-      'nav.lang':         { en: 'Language',               fr: 'Langue',               ar: 'اللغة' },
-      'nav.theme':        { en: 'Toggle theme',           fr: 'Changer de thème',     ar: 'تبديل المظهر' }
+      'launcher.visit':   { en: 'Visit',          fr: 'Visiter',       ar: 'زيارة' },
+      'launcher.noDesc':  { en: 'No description available.',
+                            fr: 'Aucune description disponible.',
+                            ar: 'لا يوجد وصف متاح.' }
     };
   </script>
+
+  <style>
+    /* ── Launcher-specific tokens ─────────────────────────────── */
+    /* Text-on-accent: white in light mode, dark in dark mode. */
+    :root                     { --on-accent: #ffffff; }
+    html[data-mode="dark"]    { --on-accent: #12151c; }
+
+    /* ── Launcher layout ──────────────────────────────────────── */
+    .launcher-main {
+      flex: 1;
+      width: 100%;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 1.75rem 1.5rem 3rem;
+    }
+    .launcher-subtitle {
+      font-size: 0.9rem;
+      color: var(--muted-soft);
+      margin: 0 0 1.5rem;
+      letter-spacing: 0.02em;
+      transition: color var(--speed);
+    }
+    .launcher-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    /* ── Card ─────────────────────────────────────────────────── */
+    /* All per-card variables (--card-accent-*, --card-shadow-*) are
+       set inline by applyCardPalettes() below, derived from each
+       app's accent hue + luminance in data_apps.js. */
+    .app-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      transition: all 0.3s ease;
+      box-shadow:
+        0 var(--card-shadow-offset-y, 3px) var(--card-shadow-blur, 10px)
+          rgba(var(--card-accent-r, 60), var(--card-accent-g, 50),
+               var(--card-accent-b, 40), var(--card-shadow-opacity, 0.10)),
+        0 1px 4px
+          rgba(var(--card-accent-r, 60), var(--card-accent-g, 50),
+               var(--card-accent-b, 40),
+               calc(var(--card-shadow-opacity, 0.10) * 0.55));
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+      --card-accent: var(--accent);
+    }
+    .app-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--card-accent);
+      border-radius: 0 0 3px 3px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .app-card:hover {
+      border-color: var(--card-accent);
+      background: var(--card-hover);
+      transform: translateY(-3px);
+      box-shadow:
+        0 var(--card-shadow-offset-y-hover, 8px) var(--card-shadow-blur-hover, 30px)
+          rgba(var(--card-accent-r, 60), var(--card-accent-g, 50),
+               var(--card-accent-b, 40), var(--card-shadow-opacity-hover, 0.22)),
+        0 2px 8px
+          rgba(var(--card-accent-r, 60), var(--card-accent-g, 50),
+               var(--card-accent-b, 40),
+               calc(var(--card-shadow-opacity-hover, 0.22) * 0.45));
+    }
+    .app-card:hover::before { opacity: 1; }
+
+    /* Icon */
+    .app-card__icon-wrap {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--card-icon-bg, var(--accent-soft));
+      flex-shrink: 0;
+      transition: background 0.3s ease, transform 0.3s ease;
+      overflow: hidden;
+    }
+    .app-card:hover .app-card__icon-wrap { transform: scale(1.05); }
+    .app-card__icon-wrap img {
+      width: 38px; height: 38px;
+      object-fit: contain;
+      border-radius: 6px;
+    }
+    .app-card__icon-letter {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--card-accent);
+      text-transform: uppercase;
+      line-height: 1;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 100%; height: 100%;
+    }
+    .app-card__icon-wrap img[data-error]                       { display: none; }
+    .app-card__icon-wrap img[data-error] + .app-card__icon-letter { display: flex; }
+
+    /* Text */
+    .app-card__name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--fg);
+      margin: 0;
+    }
+    .app-card__desc {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.55;
+      flex-grow: 1;
+      margin: 0;
+    }
+
+    /* Visit button */
+    .app-card__btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 22px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      border: none;
+      background: var(--card-accent);
+      color: var(--on-accent);
+      transition: all 0.25s ease;
+      font-family: var(--font-stack);
+      align-self: flex-start;
+      margin-top: 0.2rem;
+    }
+    .app-card__btn:hover {
+      filter: brightness(0.92);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+      transform: translateY(-1px);
+    }
+    .app-card__btn-arrow {
+      display: inline-block;
+      font-size: 1rem;
+      font-weight: 700;
+      transition: transform 0.25s ease;
+      line-height: 1;
+    }
+    .app-card__btn:hover .app-card__btn-arrow { transform: translateX(3px); }
+
+    /* RTL arrow flip */
+    [dir="rtl"] .app-card__btn-arrow { transform: scaleX(-1); }
+    [dir="rtl"] .app-card__btn:hover .app-card__btn-arrow {
+      transform: scaleX(-1) translateX(-3px);
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .launcher-main { padding: 1rem 0.75rem 2rem; }
+      .launcher-grid { grid-template-columns: 1fr; gap: 1rem; }
+      .app-card { padding: 1.15rem; }
+      .app-card__icon-wrap { width: 42px; height: 42px; border-radius: 12px; }
+      .app-card__name { font-size: 1rem; }
+    }
+    @media (min-width: 641px) and (max-width: 1024px) {
+      .launcher-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <strong data-i18n="launcher.title">Edu Dash</strong>
-    <div class="hdr-actions">
-      <button id="theme-btn" aria-label="Toggle theme" data-i18n-attr="aria-label:nav.theme" type="button">☾</button>
-      <select id="lang-sel" aria-label="Language" data-i18n-attr="aria-label:nav.lang">
-        <option value="en">English</option>
-        <option value="fr">Français</option>
-        <option value="ar">العربية</option>
-      </select>
+
+  <!-- ── Header (same structure as the per-app partials) ──────── -->
+  <header class="app-header">
+    <div class="app-header__inner">
+      <h1 class="app-header__title">
+        <img src="/arabic/assets/icons/icon-96x96.png"
+             alt="" width="26" height="26"
+             class="app-header__icon">
+        <span data-i18n="app.title">Edu Dash</span>
+      </h1>
+
+      <div class="app-header__controls">
+        <span class="app-header__status" title="Online">
+          <span class="status-dot"></span>
+        </span>
+
+        <button id="install-btn" type="button" hidden
+                class="header-btn"
+                data-i18n="nav.install">Install</button>
+
+        <select id="lang-sel" class="lang-select"
+                aria-label="Language"
+                data-i18n-attr="aria-label:nav.lang">
+          <option value="en">English</option>
+          <option value="fr">Français</option>
+          <option value="ar">العربية</option>
+        </select>
+
+        <button id="theme-btn" type="button"
+                class="theme-toggle"
+                aria-label="Toggle theme"
+                data-i18n-attr="aria-label:nav.theme">
+          <span class="icon-sun"  aria-hidden="true">☀</span>
+          <span class="icon-moon" aria-hidden="true">☽</span>
+        </button>
+
+        <button id="user-chip" type="button"
+                class="header-btn"
+                data-i18n="nav.signin">Sign in</button>
+      </div>
     </div>
   </header>
-  <main>
-    <p data-i18n="launcher.tagline">Pick an app. Each one installs separately.</p>
-    <section id="apps" aria-live="polite">
-      <p data-i18n="launcher.loading">Loading apps…</p>
-    </section>
+
+  <!-- ── Main ─────────────────────────────────────────────────── -->
+  <main class="launcher-main">
+    <p class="launcher-subtitle" data-i18n="launcher.tagline">Your learning hubs</p>
+    <div class="launcher-grid" id="apps">
+      <p data-i18n="launcher.loading"
+         style="grid-column: 1 / -1; color: var(--muted);">Loading apps…</p>
+    </div>
   </main>
+
+  <!-- ── Footer (3-col) ───────────────────────────────────────── -->
+  <footer class="app-footer">
+    <div class="app-footer__grid">
+      <div class="app-footer__col">
+        <span data-i18n="footer.version">Version 0.0.7</span>
+        <span data-i18n="footer.copy">Edu Dash</span>
+      </div>
+
+      <div class="app-footer__col app-footer__col--links">
+        <a href="/privacyPolicy.html" data-i18n="footer.confidentiality">Confidentiality Policy</a>
+        <a href="/termsOfUse.html"    data-i18n="footer.terms">Terms of Use</a>
+        <a href="/contact.html"       data-i18n="footer.contact">Contact</a>
+      </div>
+
+      <div class="app-footer__col app-footer__col--dev">
+        <span data-i18n="footer.developer">Developed by: Mejri Ziad</span>
+        <span data-i18n="footer.hosted">Hosted on GitHub and Netlify</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ── Scripts ──────────────────────────────────────────────── -->
+  <script src="/data_apps.js"></script>
   <script src="/register-sw.js" defer></script>
   <script type="module">
-    import { initTheme, initLang } from '/shared/ui.js';
-    import { applyI18n } from '/shared/i18n.js';
-    import { prefs } from '/shared/store.js';
-    initTheme();
-    initLang();
-    const container = document.getElementById('apps');
-    function cardHtml(a) {
-      const n = a.short_name || a.name;
-      return `<a class="card" href="${a.path}" target="_blank" rel="noopener" lang="${a.lang}" dir="${a.dir}">
-        <img src="${a.icon}" alt="" width="48" height="48">
-        <span><strong>${n}</strong><small>${a.name}</small></span>
-      </a>`;
+    import { initHeader }        from '/shared/ui.js';
+    import { initInstallButton } from '/shared/install.js';
+    import { applyI18n }         from '/shared/i18n.js';
+    import { prefs }             from '/shared/store.js';
+    import '/shared/i18n.js';   // side-effect: applyI18n on DOMContentLoaded
+
+    // 1. Wire header controls (theme, lang, user, status dot)
+    initHeader();
+    initInstallButton();
+
+    // 2. Card rendering helpers
+    const grid = document.getElementById('apps');
+
+    function currentLang() {
+      return prefs.get().lang || document.documentElement.lang || 'en';
     }
-    fetch('/apps.json', { cache: 'no-cache' })
-      .then((r) => r.json())
-      .then(({ apps = [] }) => {
-        container.innerHTML = apps.map(cardHtml).join('');
-      })
-      .catch(() => {
-        container.innerHTML = `<p data-i18n="launcher.error">Could not load apps.</p>`;
-        applyI18n(container);
+    function t(key) {
+      const entry = window.I18N[key];
+      return entry ? (entry[currentLang()] ?? entry.en ?? key) : key;
+    }
+    function escapeHtml(s) {
+      const d = document.createElement('div');
+      d.textContent = s == null ? '' : String(s);
+      return d.innerHTML;
+    }
+
+    function renderCards() {
+      const lang = currentLang();
+      const apps = window.APPS || [];
+      if (!apps.length) {
+        grid.innerHTML =
+          `<p style="grid-column:1/-1;color:var(--muted);">${
+            escapeHtml(t('launcher.error'))
+          }</p>`;
+        return;
+      }
+
+      grid.innerHTML = apps.map((app) => {
+        const L = app[lang] || app.en || {};
+        const name = L.name || app.id;
+        const desc = L.description || t('launcher.noDesc');
+        const first = name.charAt(0).toUpperCase();
+        return `
+          <div class="app-card" data-card-id="${escapeHtml(app.id)}">
+            <div class="app-card__icon-wrap">
+              <img src="${escapeHtml(app.icon)}" alt="" loading="lazy"
+                   onerror="this.setAttribute('data-error','1');this.nextElementSibling.style.display='flex';">
+              <span class="app-card__icon-letter">${escapeHtml(first)}</span>
+            </div>
+            <h3 class="app-card__name">${escapeHtml(name)}</h3>
+            <p class="app-card__desc">${escapeHtml(desc)}</p>
+            <a href="${escapeHtml(app.link)}"
+               class="app-card__btn"
+               target="_blank" rel="noopener noreferrer">
+              ${escapeHtml(t('launcher.visit'))}
+              <span class="app-card__btn-arrow">→</span>
+            </a>
+          </div>
+        `;
+      }).join('');
+
+      applyCardPalettes(prefs.get().mode || 'light');
+    }
+
+    // 3. Per-card dynamic palette — hue/luminance-driven shadows
+    function hexToRgb(hex) {
+      const clean = hex.replace('#', '');
+      const full  = clean.length === 3
+        ? clean[0]+clean[0]+clean[1]+clean[1]+clean[2]+clean[2]
+        : clean;
+      const m = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(full);
+      if (!m) return { r: 60, g: 50, b: 40 };
+      return { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) };
+    }
+    function getLuminance(r, g, b) {
+      const lin = (c) => {
+        c /= 255;
+        return c <= 0.03928 ? c/12.92 : Math.pow((c + 0.055)/1.055, 2.4);
+      };
+      return 0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b);
+    }
+    function getHue(r, g, b) {
+      const rf = r/255, gf = g/255, bf = b/255;
+      const max = Math.max(rf, gf, bf), min = Math.min(rf, gf, bf);
+      const delta = max - min;
+      if (delta === 0) return 0;
+      let h = 0;
+      if (max === rf)      h = ((gf - bf) / delta) % 6;
+      else if (max === gf) h = (bf - rf) / delta + 2;
+      else                 h = (rf - gf) / delta + 4;
+      h = Math.round(h * 60);
+      if (h < 0) h += 360;
+      return h;
+    }
+    function applyCardPalettes(theme) {
+      const isDark = theme === 'dark';
+      document.querySelectorAll('.app-card').forEach((el) => {
+        const app = (window.APPS || []).find((c) => c.id === el.getAttribute('data-card-id'));
+        if (!app) return;
+
+        const palette = isDark
+          ? (app.darkModePalette || {})
+          : (app.lightModePalette || {});
+        const accent = palette.accent || '#4a7fd9';
+
+        el.style.setProperty('--card-accent', accent);
+        if (palette.iconBg) el.style.setProperty('--card-icon-bg', palette.iconBg);
+        else                el.style.removeProperty('--card-icon-bg');
+
+        const rgb  = hexToRgb(accent);
+        const lum  = getLuminance(rgb.r, rgb.g, rgb.b);
+        const hue  = getHue(rgb.r, rgb.g, rgb.b);
+
+        const baseOp    = 0.06 + (1 - lum) * 0.12;
+        const hoverOp   = baseOp * 2.1;
+        const darkMul   = isDark ? 1.45 : 1;
+        const finalOp   = Math.min(baseOp  * darkMul, 0.22);
+        const finalOpH  = Math.min(hoverOp * darkMul, 0.40);
+
+        let offsetX = 0;
+        if (hue >= 0   && hue <= 50)  offsetX =  2;
+        else if (hue >  50  && hue <= 100) offsetX =  1;
+        else if (hue >= 200 && hue <= 280) offsetX = -2;
+        else if (hue >  280 && hue <= 330) offsetX = -1;
+
+        let blurBase = 10, blurHover = 30;
+        if      (hue >= 0   && hue <= 100) { blurBase = 12; blurHover = 34; }
+        else if (hue >= 200 && hue <= 300) { blurBase = 8;  blurHover = 26; }
+
+        el.style.setProperty('--card-accent-r', rgb.r);
+        el.style.setProperty('--card-accent-g', rgb.g);
+        el.style.setProperty('--card-accent-b', rgb.b);
+        el.style.setProperty('--card-shadow-opacity',       finalOp.toFixed(3));
+        el.style.setProperty('--card-shadow-opacity-hover', finalOpH.toFixed(3));
+        el.style.setProperty('--card-shadow-blur',          blurBase + 'px');
+        el.style.setProperty('--card-shadow-blur-hover',    blurHover + 'px');
+        el.style.setProperty('--card-shadow-offset-x',      offsetX + 'px');
+        el.style.setProperty('--card-shadow-offset-y',      '3px');
+        el.style.setProperty('--card-shadow-offset-y-hover',(6 + Math.abs(offsetX)) + 'px');
       });
+    }
+
+    // 4. React to language + theme changes
+    window.addEventListener('edu:lang-changed', () => {
+      renderCards();
+      applyI18n();
+    });
+    window.addEventListener('edu:mode-changed', (e) => {
+      applyCardPalettes(e.detail.mode);
+    });
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'edu:mode') applyCardPalettes(prefs.get().mode);
+      if (e.key === 'edu:lang') { renderCards(); applyI18n(); }
+    });
+
+    // 5. Initial render
+    renderCards();
+    applyI18n();
   </script>
-  <style>
-    .card { display:flex; align-items:center; gap:1rem; text-decoration:none; color:inherit;
-            background:var(--card,#fff); border:1px solid var(--line,#e3e6ea);
-            border-radius:14px; padding:.9rem 1rem; margin:.5rem 0; max-width:560px; }
-    .card:hover { border-color:#c9ced6; }
-    .card img { width:48px; height:48px; border-radius:12px; flex:none; }
-    .card strong { display:block; }
-    .card small { color:var(--muted,#7a828c); }
-  </style>
 </body>
 </html>
