@@ -1,5 +1,5 @@
 /* Edu Dash — single service worker, scope "/". */
-const VERSION = 'v6';
+const VERSION = 'v7';
 const CACHE   = `edu-dash-${VERSION}`;
 const SHELL = [
   '/', '/index.html', '/offline.html', '/apps.json', '/register-sw.js',

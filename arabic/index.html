@@ -11,7 +11,8 @@
   <link rel="icon" href="/arabic/assets/icons/icon-96x96.png" sizes="96x96" type="image/png">
   <link rel="apple-touch-icon" href="/arabic/assets/icons/icon-192x192.png">
   <link rel="stylesheet" href="/arabic/assets/css/styles.css">
-  <!-- Sync theme + lang before paint so there's no flash -->
+
+  <!-- Pre-paint -->
   <script>
     try {
       const m = JSON.parse(localStorage.getItem('edu:mode') || '"light"');
@@ -21,102 +22,677 @@
       document.documentElement.dir  = l === 'ar' ? 'rtl' : 'ltr';
     } catch {}
   </script>
-  <!-- Page-scoped translations. Includes keys used by header/footer partials. -->
+
   <script>
     window.I18N = {
-      // app / header partial
-      'app.title':    { en: 'Arabic Edu',     fr: 'Éduc. Arabe',        ar: 'تعليم العربية' },
-      'nav.signin':   { en: 'Sign in',        fr: 'Connexion',          ar: 'تسجيل الدخول' },
-      'nav.install':  { en: 'Install',        fr: 'Installer',          ar: 'تثبيت' },
-      'nav.addHome':  { en: 'Add to Home',    fr: 'Ajouter à l\u2019accueil', ar: 'أضف للشاشة' },
-      'nav.lang':     { en: 'Language',       fr: 'Langue',             ar: 'اللغة' },
-      'nav.theme':    { en: 'Toggle theme',   fr: 'Changer de thème',   ar: 'تبديل المظهر' },
-      // footer partial
-      'footer.copy':  { en: 'Arabic Edu',     fr: 'Éduc. Arabe',        ar: 'تعليم العربية' },
-      'footer.rights':{ en: 'All rights reserved', fr: 'Tous droits réservés', ar: 'كل الحقوق محفوظة' },
+      // header
+      'app.title':         { en: 'Arabic Edu',           fr: 'Éduc. Arabe',               ar: 'تعليم العربية' },
+      'nav.signin':        { en: 'Sign in',              fr: 'Connexion',                 ar: 'تسجيل الدخول' },
+      'nav.install':       { en: 'Install',              fr: 'Installer',                 ar: 'تثبيت' },
+      'nav.addHome':       { en: 'Add to Home',          fr: 'Ajouter à l’accueil',       ar: 'أضف للشاشة' },
+      'nav.lang':          { en: 'Language',             fr: 'Langue',                    ar: 'اللغة' },
+      'nav.theme':         { en: 'Toggle theme',         fr: 'Changer de thème',          ar: 'تبديل المظهر' },
+      'nav.statusOnline':  { en: 'Online',               fr: 'En ligne',                  ar: 'متصل' },
+      'nav.statusOffline': { en: 'Offline',              fr: 'Hors ligne',                ar: 'غير متصل' },
+
+      // footer
+      'footer.version':         { en: 'Version 0.0.7',            fr: 'Version 0.0.7',
+                                  ar: 'الإصدار 0.0.7' },
+      'footer.copy':            { en: 'Arabic Edu',               fr: 'Éduc. Arabe',
+                                  ar: 'تعليم العربية' },
+      'footer.confidentiality': { en: 'Confidentiality Policy',   fr: 'Politique de confidentialité',
+                                  ar: 'سياسة الخصوصية' },
+      'footer.terms':           { en: 'Terms of Use',             fr: 'Conditions d’utilisation',
+                                  ar: 'شروط الاستخدام' },
+      'footer.contact':         { en: 'Contact',                  fr: 'Contact',
+                                  ar: 'اتصل بنا' },
+      'footer.developer':       { en: 'Developed by: Mejri Ziad', fr: 'Développé par : Mejri Ziad',
+                                  ar: 'طُوِّر بواسطة: ماجري زياد' },
+      'footer.hosted':          { en: 'Hosted on GitHub and Netlify',
+                                  fr: 'Hébergé sur GitHub et Netlify',
+                                  ar: 'مستضاف على GitHub وNetlify' },
+
       // page
-      'page.welcome':    { en: 'Welcome',        fr: 'Bienvenue',             ar: 'مرحباً' },
-      'page.subtitle':   { en: 'Pick a module to start',
-                            fr: 'Choisissez un module pour commencer',
-                            ar: 'اختر وحدة للبدء' },
-      'page.modules':    { en: 'Modules',        fr: 'Modules',               ar: 'الوحدات' },
-      'page.y7m1':       { en: 'Year 7 · Module 1',
-                            fr: 'Année 7 · Module 1',
-                            ar: 'السنة 7 · الوحدة 1' },
-      'page.lesson1':    { en: 'Lesson 1 — Introduction',
-                            fr: 'Leçon 1 — Introduction',
-                            ar: 'الدرس الأول — مقدمة' },
-      'page.lesson2':    { en: 'Lesson 2 — Practice',
-                            fr: 'Leçon 2 — Exercices',
-                            ar: 'الدرس الثاني — تمارين' },
-      'page.otherApps':  { en: 'Other apps',     fr: 'Autres apps',           ar: 'تطبيقات أخرى' },
-      'page.philo':      { en: 'Philo Edu ↗',    fr: 'Philo Édu ↗',           ar: 'فلسفة ↗' },
-      'page.visits':     { en: 'Visits on this device',
-                            fr: 'Visites sur cet appareil',
-                            ar: 'الزيارات على هذا الجهاز' },
-'footer.version':         { en: 'Version 0.0.7',            fr: 'Version 0.0.7',
-                            ar: 'الإصدار 0.0.7' },
-'footer.confidentiality': { en: 'Confidentiality Policy',   fr: 'Politique de confidentialité',
-                            ar: 'سياسة الخصوصية' },
-'footer.terms':           { en: 'Terms of Use',             fr: 'Conditions d’utilisation',
-                            ar: 'شروط الاستخدام' },
-'footer.contact':         { en: 'Contact',                  fr: 'Contact',
-                            ar: 'اتصل بنا' },
-'footer.developer':       { en: 'Developed by: Mejri Ziad', fr: 'Développé par : Mejri Ziad',
-                            ar: 'طُوِّر بواسطة: ماجري زياد' },
-'footer.hosted':          { en: 'Hosted on GitHub and Netlify',
-                            fr: 'Hébergé sur GitHub et Netlify',
-                            ar: 'مستضاف على GitHub وNetlify' },
-'nav.statusOnline':  { en: 'Online',  fr: 'En ligne',   ar: 'متصل' },
-'nav.statusOffline': { en: 'Offline', fr: 'Hors ligne', ar: 'غير متصل' }
+      'page.subtitle':    { en: 'Pick a year to start',   fr: 'Choisissez une année pour commencer',
+                            ar: 'اختر سنة للبدء' },
+      'page.comingSoon':  { en: 'Coming soon',            fr: 'Bientôt disponible',
+                            ar: 'قريباً' },
+      'page.back':        { en: 'Back',                   fr: 'Retour',
+                            ar: 'رجوع' },
+      'page.pickSection': { en: 'Pick a section',         fr: 'Choisissez une section',
+                            ar: 'اختر الشعبة' },
+      'page.pickCategory':{ en: 'Pick a category',        fr: 'Choisissez une matière',
+                            ar: 'اختر المادة' },
+      'page.viewLesson':  { en: 'Open lesson',            fr: 'Ouvrir la leçon',
+                            ar: 'عرض الدرس' },
+      'page.close':       { en: 'Close',                  fr: 'Fermer',
+                            ar: 'إغلاق' },
+      'page.empty':       { en: 'No content yet.',        fr: 'Pas encore de contenu.',
+                            ar: 'لا يوجد محتوى بعد.' }
     };
   </script>
+
+  <style>
+    /* ── Launcher layout ─────────────────────────────────── */
+    .launcher-main {
+      flex: 1;
+      width: 100%;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 1.75rem 1.5rem 3rem;
+    }
+    .launcher-subtitle {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin: 0 0 1.5rem;
+      letter-spacing: 0.02em;
+    }
+    .launcher-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.25rem;
+    }
+
+    /* ── Year card ───────────────────────────────────────── */
+    :root { --on-accent: #ffffff; }
+    html[data-mode="dark"] { --on-accent: #12151c; }
+
+    .year-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      transition: all 0.3s ease;
+      box-shadow:
+        0 var(--card-shadow-offset-y, 3px) var(--card-shadow-blur, 10px)
+          rgba(var(--card-accent-r,60), var(--card-accent-g,50), var(--card-accent-b,40),
+               var(--card-shadow-opacity, 0.10)),
+        0 1px 4px rgba(var(--card-accent-r,60), var(--card-accent-g,50), var(--card-accent-b,40),
+                     calc(var(--card-shadow-opacity, 0.10) * 0.55));
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      --card-accent: var(--accent);
+    }
+    .year-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--card-accent);
+      border-radius: 0 0 3px 3px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .year-card:hover {
+      border-color: var(--card-accent);
+      background: var(--card-hover);
+      transform: translateY(-3px);
+      box-shadow:
+        0 var(--card-shadow-offset-y-hover, 8px) var(--card-shadow-blur-hover, 30px)
+          rgba(var(--card-accent-r,60), var(--card-accent-g,50), var(--card-accent-b,40),
+               var(--card-shadow-opacity-hover, 0.22)),
+        0 2px 8px rgba(var(--card-accent-r,60), var(--card-accent-g,50), var(--card-accent-b,40),
+                     calc(var(--card-shadow-opacity-hover, 0.22) * 0.45));
+    }
+    .year-card:hover::before { opacity: 1; }
+
+    .year-card__icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--card-icon-bg, var(--accent-soft));
+      font-size: 1.8rem;
+      flex-shrink: 0;
+      transition: transform 0.3s ease;
+    }
+    .year-card:hover .year-card__icon { transform: scale(1.05); }
+    .year-card__name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--fg);
+      margin: 0;
+    }
+    .year-card__meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin: 0;
+    }
+    .year-card__btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 22px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: none;
+      background: var(--card-accent);
+      color: var(--on-accent);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-family: var(--font-stack);
+      align-self: flex-start;
+      margin-top: 0.2rem;
+    }
+    .year-card__btn:hover { filter: brightness(0.92); }
+    [dir="rtl"] .year-card__btn span.arrow { transform: scaleX(-1); }
+
+    /* ── Modal ───────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9000;
+      padding: 1rem;
+      animation: fadeIn 0.18s ease;
+    }
+    .modal-backdrop.open { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .modal {
+      background: var(--card);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+      overflow: hidden;
+      border-top: 4px solid var(--modal-accent, var(--accent));
+      animation: slideIn 0.22s ease;
+    }
+    @keyframes slideIn {
+      from { transform: translateY(8px); opacity: 0; }
+      to   { transform: translateY(0);   opacity: 1; }
+    }
+
+    .modal__header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--card-hover);
+    }
+    .modal__title {
+      flex: 1;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--fg);
+      margin: 0;
+    }
+    .modal__back,
+    .modal__close {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--fg);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: all 0.2s;
+      font-family: var(--font-stack);
+    }
+    .modal__back:hover,
+    .modal__close:hover { border-color: var(--accent); color: var(--accent); }
+    .modal__back[hidden] { display: none; }
+    [dir="rtl"] .modal__back .arrow { transform: scaleX(-1); }
+
+    .modal__body {
+      padding: 1.25rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    /* Card-style row used for section / category */
+    .modal__item {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 1rem 1.25rem;
+      background: var(--card-hover);
+      border: 1px solid var(--line);
+      border-inline-start: 4px solid var(--modal-accent, var(--accent));
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      color: var(--fg);
+    }
+    .modal__item:hover {
+      transform: translateX(4px);
+      background: var(--accent-soft);
+      border-color: var(--modal-accent, var(--accent));
+    }
+    [dir="rtl"] .modal__item:hover { transform: translateX(-4px); }
+    .modal__item:last-child { margin-bottom: 0; }
+    .modal__item__icon {
+      font-size: 1.6rem;
+      width: 40px; height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      flex-shrink: 0;
+    }
+    .modal__item__text { flex: 1; }
+    .modal__item__name {
+      font-weight: 600;
+      color: var(--fg);
+      margin: 0 0 0.15rem;
+      font-size: 0.95rem;
+    }
+    .modal__item__sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin: 0;
+    }
+    .modal__item__chev {
+      color: var(--muted);
+      font-size: 1.2rem;
+    }
+    [dir="rtl"] .modal__item__chev { transform: scaleX(-1); }
+
+    /* Lesson rows */
+    .lesson-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px dashed var(--line);
+    }
+    .lesson-row:last-child { border-bottom: none; }
+    .lesson-row__name {
+      font-size: 0.9rem;
+      color: var(--fg);
+      margin: 0;
+    }
+    .lesson-row__link {
+      background: var(--modal-accent, var(--accent));
+      color: var(--on-accent);
+      padding: 0.35rem 0.85rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: filter 0.2s;
+    }
+    .lesson-row__link:hover { filter: brightness(0.92); }
+    .lesson-row__link--disabled {
+      background: var(--line);
+      color: var(--muted);
+      cursor: not-allowed;
+    }
+
+    .modal__empty {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* Mobile */
+    @media (max-width: 640px) {
+      .launcher-main { padding: 1rem 0.75rem 2rem; }
+      .launcher-grid { grid-template-columns: 1fr; gap: 1rem; }
+      .year-card { padding: 1.15rem; }
+      .year-card__icon { width: 42px; height: 42px; font-size: 1.5rem; }
+      .modal { max-height: 92vh; }
+      .modal__body { padding: 1rem; }
+    }
+  </style>
 </head>
 <body>
   <div data-include="/arabic/header.html"></div>
-  <main>
-    <h1 data-i18n="page.welcome">Welcome</h1>
-    <p data-i18n="page.subtitle">Pick a module to start</p>
-    <h2 data-i18n="page.modules">Modules</h2>
-    <section class="module-list">
-      <a class="module-card" href="/arabic/year7/module1/lesson1.html">
-        <strong data-i18n="page.y7m1">Year 7 · Module 1</strong>
-        <small  data-i18n="page.lesson1">Lesson 1 — Introduction</small>
-      </a>
-      <a class="module-card" href="/arabic/year7/module1/lesson2.html">
-        <strong data-i18n="page.y7m1">Year 7 · Module 1</strong>
-        <small  data-i18n="page.lesson2">Lesson 2 — Practice</small>
-      </a>
-    </section>
-    <h2 data-i18n="page.otherApps">Other apps</h2>
-    <p>
-      <a data-app-link="philo"
-         href="/philo/"
-         target="_blank" rel="noopener noreferrer"
-         data-i18n="page.philo">Philo Edu ↗</a>
-    </p>
-    <p class="muted">
-      <small>
-        <span data-i18n="page.visits">Visits on this device</span>:
-        <span id="visits">–</span>
-      </small>
-    </p>
+
+  <main class="launcher-main">
+    <p class="launcher-subtitle" data-i18n="page.subtitle">اختر سنة للبدء</p>
+    <div class="launcher-grid" id="yearGrid"></div>
   </main>
+
   <div data-include="/arabic/footer.html"></div>
+
+  <!-- Modal for categories / modules / lessons -->
+  <div class="modal-backdrop" id="modal">
+    <div class="modal" id="modalBox" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header class="modal__header">
+        <button class="modal__back" id="modalBack" type="button" aria-label="Back" hidden>
+          <span class="arrow">←</span>
+        </button>
+        <h2 class="modal__title" id="modalTitle"></h2>
+        <button class="modal__close" id="modalClose" type="button" aria-label="Close">✕</button>
+      </header>
+      <div class="modal__body" id="modalBody"></div>
+    </div>
+  </div>
+
   <script src="/shared/include.js"></script>
+  <script src="/arabic/data_curriculum.js"></script>
   <script src="/register-sw.js" defer></script>
+
   <script type="module">
-    import { initHeader, externalAppLink } from '/shared/ui.js';
+    import { initHeader }        from '/shared/ui.js';
     import { initInstallButton } from '/shared/install.js';
+    import { applyI18n }         from '/shared/i18n.js';
+    import { prefs }             from '/shared/store.js';
     import '/shared/i18n.js';
-    import { trackVisit } from '/arabic/assets/js/app.js';
+
     initHeader();
     initInstallButton();
-    externalAppLink('philo');
-    trackVisit().then((n) => {
-      const el = document.getElementById('visits');
-      if (el) el.textContent = String(n);
-    }).catch(() => {});
+
+    // ── Helpers ──────────────────────────────────────────────
+    const lang = () => prefs.get().lang || document.documentElement.lang || 'ar';
+    const t = (key) => {
+      const e = window.I18N[key];
+      return e ? (e[lang()] ?? e.en ?? key) : key;
+    };
+    const tr = (obj) => obj ? (obj[lang()] ?? obj.en ?? '') : '';
+    const esc = (s) => {
+      const d = document.createElement('div');
+      d.textContent = s == null ? '' : String(s);
+      return d.innerHTML;
+    };
+
+    // ── Card palette derivation (same algorithm as root launcher) ──
+    function hexToRgb(hex) {
+      const c = hex.replace('#','');
+      const full = c.length === 3 ? c.split('').map(x => x+x).join('') : c;
+      const m = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(full);
+      return m ? { r:+('0x'+m[1]), g:+('0x'+m[2]), b:+('0x'+m[3]) } : { r:60,g:50,b:40 };
+    }
+    function lum(r,g,b){
+      const l = (v)=>{ v/=255; return v<=0.03928? v/12.92 : Math.pow((v+0.055)/1.055,2.4); };
+      return 0.2126*l(r) + 0.7152*l(g) + 0.0722*l(b);
+    }
+    function hue(r,g,b){
+      const rf=r/255,gf=g/255,bf=b/255;
+      const mx=Math.max(rf,gf,bf), mn=Math.min(rf,gf,bf), d=mx-mn;
+      if (d===0) return 0;
+      let h = mx===rf ? ((gf-bf)/d)%6 : mx===gf ? (bf-rf)/d+2 : (rf-gf)/d+4;
+      h = Math.round(h*60); if (h<0) h+=360;
+      return h;
+    }
+    function applyCardPalette(el, accent, iconBg, isDark) {
+      el.style.setProperty('--card-accent', accent);
+      if (iconBg) el.style.setProperty('--card-icon-bg', iconBg);
+      const { r,g,b } = hexToRgb(accent);
+      const L = lum(r,g,b), H = hue(r,g,b);
+      const baseOp  = 0.06 + (1-L) * 0.12;
+      const hoverOp = baseOp * 2.1;
+      const darkMul = isDark ? 1.45 : 1;
+      el.style.setProperty('--card-accent-r', r);
+      el.style.setProperty('--card-accent-g', g);
+      el.style.setProperty('--card-accent-b', b);
+      el.style.setProperty('--card-shadow-opacity',       Math.min(baseOp  * darkMul, 0.22).toFixed(3));
+      el.style.setProperty('--card-shadow-opacity-hover', Math.min(hoverOp * darkMul, 0.40).toFixed(3));
+      let offsetX = 0;
+      if (H<=50) offsetX=2; else if (H<=100) offsetX=1;
+      else if (H>=200 && H<=280) offsetX=-2; else if (H>280 && H<=330) offsetX=-1;
+      let blurBase = 10, blurHover = 30;
+      if (H<=100) { blurBase=12; blurHover=34; }
+      else if (H>=200 && H<=300) { blurBase=8; blurHover=26; }
+      el.style.setProperty('--card-shadow-blur',          blurBase+'px');
+      el.style.setProperty('--card-shadow-blur-hover',    blurHover+'px');
+      el.style.setProperty('--card-shadow-offset-x',      offsetX+'px');
+      el.style.setProperty('--card-shadow-offset-y',      '3px');
+      el.style.setProperty('--card-shadow-offset-y-hover',(6+Math.abs(offsetX))+'px');
+    }
+
+    // ── Render year cards ───────────────────────────────────
+    const grid = document.getElementById('yearGrid');
+
+    function renderYearCards() {
+      const isDark = prefs.get().mode === 'dark';
+      const years = window.CURRICULUM?.years || [];
+      if (!years.length) {
+        grid.innerHTML = `<p style="grid-column:1/-1;color:var(--muted);">${esc(t('page.empty'))}</p>`;
+        return;
+      }
+      grid.innerHTML = years.map(y => `
+        <div class="year-card" data-year-id="${esc(y.id)}" role="button" tabindex="0">
+          <div class="year-card__icon">${esc(y.icon || '📘')}</div>
+          <h3 class="year-card__name">${esc(tr(y.name))}</h3>
+          <button class="year-card__btn" type="button">
+            ${esc(t('page.pickCategory'))} <span class="arrow">→</span>
+          </button>
+        </div>
+      `).join('');
+      grid.querySelectorAll('.year-card').forEach(card => {
+        const y = years.find(x => x.id === card.dataset.yearId);
+        if (!y) return;
+        const pal = isDark ? y.darkModePalette : y.lightModePalette;
+        applyCardPalette(card, pal.accent, pal.iconBg, isDark);
+        card.addEventListener('click', () => openYear(y.id));
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openYear(y.id); }
+        });
+      });
+    }
+
+    // ── Navigation state ────────────────────────────────────
+    let path = { year: null, section: null, category: null, moduleIdx: null };
+
+    const backdrop = document.getElementById('modal');
+    const modalBox = document.getElementById('modalBox');
+    const titleEl  = document.getElementById('modalTitle');
+    const bodyEl   = document.getElementById('modalBody');
+    const backBtn  = document.getElementById('modalBack');
+    const closeBtn = document.getElementById('modalClose');
+
+    function closeModal() {
+      path = { year: null, section: null, category: null, moduleIdx: null };
+      backdrop.classList.remove('open');
+    }
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
+    closeBtn.addEventListener('click', closeModal);
+    backBtn.addEventListener('click',  goBack);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && backdrop.classList.contains('open')) closeModal();
+    });
+
+    function goBack() {
+      if (path.moduleIdx !== null)      path.moduleIdx = null;
+      else if (path.category !== null)  path.category  = null;
+      else if (path.section  !== null)  path.section   = null;
+      else                              { closeModal(); return; }
+      renderModal();
+    }
+
+    // ── Find helpers ────────────────────────────────────────
+    function getYear()    { return window.CURRICULUM.years.find(y => y.id === path.year); }
+    function getSection() {
+      const y = getYear();
+      return (y?.sections || []).find(s => s.id === path.section) || null;
+    }
+    function getCategories() {
+      const y = getYear(); if (!y) return {};
+      if (y.sections && path.section) {
+        return y.categoriesBySection?.[path.section] || {};
+      }
+      return y.categories || {};
+    }
+    function getCategory() {
+      return getCategories()[path.category] || null;
+    }
+
+    // ── Open helpers ────────────────────────────────────────
+    function openYear(id) {
+      path = { year: id, section: null, category: null, moduleIdx: null };
+      const y = getYear();
+      // If sections exist → show section picker. Otherwise → categories.
+      renderModal();
+      backdrop.classList.add('open');
+    }
+    function openSection(id) {
+      path.section = id; path.category = null; path.moduleIdx = null;
+      renderModal();
+    }
+    function openCategory(id) {
+      path.category = id; path.moduleIdx = null;
+      renderModal();
+    }
+    function openModule(idx) {
+      path.moduleIdx = idx;
+      renderModal();
+    }
+
+    // ── Render modal content ────────────────────────────────
+    function renderModal() {
+      const y = getYear();
+      if (!y) { closeModal(); return; }
+
+      const isDark = prefs.get().mode === 'dark';
+      const pal = isDark ? y.darkModePalette : y.lightModePalette;
+      modalBox.style.setProperty('--modal-accent', pal.accent);
+
+      // Decide what level we're at
+      const needsSection = y.sections && !path.section;
+
+      // Title
+      if (path.moduleIdx !== null) {
+        const cat = getCategory();
+        const mod = cat.modules[path.moduleIdx];
+        titleEl.textContent = tr(mod.name);
+      } else if (path.category) {
+        const cat = getCategory();
+        titleEl.textContent = tr(cat.name);
+      } else if (path.section) {
+        const sec = getSection();
+        titleEl.textContent = tr(sec.name);
+      } else if (needsSection) {
+        titleEl.textContent = tr(y.name) + ' — ' + t('page.pickSection');
+      } else {
+        titleEl.textContent = tr(y.name) + ' — ' + t('page.pickCategory');
+      }
+
+      // Back button visibility
+      backBtn.hidden = (path.section === null && path.category === null && path.moduleIdx === null);
+
+      // Body
+      if (path.moduleIdx !== null) {
+        bodyEl.innerHTML = renderLessonList(y, getCategory().modules[path.moduleIdx]);
+      } else if (path.category) {
+        bodyEl.innerHTML = renderModuleList(getCategory());
+      } else if (needsSection) {
+        bodyEl.innerHTML = renderSectionList(y);
+      } else {
+        const cats = getCategories();
+        bodyEl.innerHTML = Object.keys(cats).length
+          ? renderCategoryList(cats)
+          : `<p class="modal__empty">${esc(t('page.comingSoon'))}</p>`;
+      }
+
+      // Wire click handlers
+      bodyEl.querySelectorAll('[data-section-id]').forEach(el =>
+        el.addEventListener('click', () => openSection(el.dataset.sectionId)));
+      bodyEl.querySelectorAll('[data-category-id]').forEach(el =>
+        el.addEventListener('click', () => openCategory(el.dataset.categoryId)));
+      bodyEl.querySelectorAll('[data-module-idx]').forEach(el =>
+        el.addEventListener('click', () => openModule(+el.dataset.moduleIdx)));
+    }
+
+    // ── Level renderers ─────────────────────────────────────
+    function renderSectionList(y) {
+      return y.sections.map(s => `
+        <div class="modal__item" data-section-id="${esc(s.id)}" role="button" tabindex="0">
+          <div class="modal__item__icon">📚</div>
+          <div class="modal__item__text">
+            <p class="modal__item__name">${esc(tr(s.name))}</p>
+          </div>
+          <span class="modal__item__chev">›</span>
+        </div>
+      `).join('');
+    }
+
+    function renderCategoryList(cats) {
+      return Object.keys(cats).map(id => {
+        const c = cats[id];
+        const count = (c.modules || []).length;
+        return `
+          <div class="modal__item" data-category-id="${esc(id)}" role="button" tabindex="0">
+            <div class="modal__item__icon">${esc(c.icon || '📖')}</div>
+            <div class="modal__item__text">
+              <p class="modal__item__name">${esc(tr(c.name))}</p>
+              <p class="modal__item__sub">${count} ${count === 1 ? 'module' : 'modules'}</p>
+            </div>
+            <span class="modal__item__chev">›</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderModuleList(cat) {
+      const mods = cat.modules || [];
+      if (!mods.length) return `<p class="modal__empty">${esc(t('page.comingSoon'))}</p>`;
+      return mods.map((m, i) => {
+        const lessonCount = (m.lessons || []).length;
+        return `
+          <div class="modal__item" data-module-idx="${i}" role="button" tabindex="0">
+            <div class="modal__item__icon">📘</div>
+            <div class="modal__item__text">
+              <p class="modal__item__name">${esc(tr(m.name))}</p>
+              <p class="modal__item__sub">${lessonCount} ${lessonCount === 1 ? 'lesson' : 'lessons'}</p>
+            </div>
+            <span class="modal__item__chev">›</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderLessonList(y, mod) {
+      const lessons = mod.lessons || [];
+      if (!lessons.length) return `<p class="modal__empty">${esc(t('page.comingSoon'))}</p>`;
+      // Prefix relative AH_* links with the app path so they resolve from /arabic/
+      return lessons.map(l => {
+        const href = l.link ? (l.link.startsWith('/') ? l.link : `/arabic/${l.link}`) : null;
+        return `
+          <div class="lesson-row">
+            <p class="lesson-row__name">${esc(tr(l.name))}</p>
+            ${href
+              ? `<a class="lesson-row__link" href="${esc(href)}">${esc(t('page.viewLesson'))}</a>`
+              : `<span class="lesson-row__link lesson-row__link--disabled">${esc(t('page.comingSoon'))}</span>`}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ── React to theme + language ───────────────────────────
+    window.addEventListener('edu:lang-changed', () => {
+      renderYearCards();
+      if (backdrop.classList.contains('open')) renderModal();
+      applyI18n();
+    });
+    window.addEventListener('edu:mode-changed', (e) => {
+      renderYearCards();
+      if (backdrop.classList.contains('open')) renderModal();
+    });
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'edu:mode' || e.key === 'edu:lang') {
+        renderYearCards();
+        if (backdrop.classList.contains('open')) renderModal();
+      }
+    });
+
+    // ── Initial render ──────────────────────────────────────
+    renderYearCards();
+    applyI18n();
   </script>
 </body>
 </html>
